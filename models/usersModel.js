@@ -8,14 +8,12 @@ const usersModel = new mongoose.Schema(
     firstName: {
       type: String,
       required: [true, 'Please provide your name'],
-      unique: true,
       minlength: 5,
       maxlength: 50,
     },
     lastName: {
       type: String,
       required: [true, 'Please provide your surname'],
-      unique: true,
     },
     email: {
       type: String,
@@ -42,10 +40,37 @@ const usersModel = new mongoose.Schema(
     },
     dob: {
       type: String,
-      required: [true, 'Please provide your'],
+      required: [true, 'Please provide your date of birth'],
+    },
+    verified: {
+      type: Date,
+    },
+    passwordTokenExpirationDate: {
+      type: Date,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    passwordToken: {
+      type: String,
+    },
+    verificationToken: {
+      type: String,
     },
   },
   { timestamps: true }
 );
+
+usersModel.pre('save', async function () {
+  if (!this.isModified('password')) return;
+  const genSalt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, genSalt);
+});
+
+usersModel.methods.ComparePassword = async function (candidatePassword) {
+  const isMatch = await bcrypt.compare(candidatePassword, this.password);
+  return isMatch;
+};
 
 module.exports = mongoose.model('User', usersModel);
