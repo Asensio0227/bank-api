@@ -1,4 +1,3 @@
-const { required } = require('joi');
 const mongoose = require('mongoose');
 
 const accountModel = new mongoose.Schema(
@@ -10,13 +9,17 @@ const accountModel = new mongoose.Schema(
     branchCode: {
       type: Number,
       required: [true, 'Please provide your branch code'],
-      unique: true,
     },
     accountType: {
       type: String,
       enum: ['savings', 'checking', 'loan'],
       required: [true, 'Please provide your account type'],
       default: 'savings',
+    },
+    cardType: {
+      type: String,
+      enum: ['debit', 'credit'],
+      required: [true, 'Please provide card type'],
     },
     accountNumber: {
       type: Number,
@@ -27,11 +30,9 @@ const accountModel = new mongoose.Schema(
       type: Number,
       default: 0.0,
     },
-    interestRate: {
-      type: Number,
-    },
     overdraftLimit: {
       type: Number,
+      default: 1000,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -41,7 +42,20 @@ const accountModel = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+accountModel.virtual('transaction', {
+  ref: 'Transaction',
+  localField: '_id',
+  foreignField: 'account',
+  justOne: false,
+});
+
+accountModel.pre('remove', async function (next) {
+  await this.model('Transaction').deleteMany({ account: this._id });
+});
 
 module.exports = mongoose.model('Account', accountModel);

@@ -15,6 +15,13 @@ const usersModel = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide your surname'],
     },
+    idea: {
+      type: String,
+      validate: {
+        validator: validator.isURL,
+        message: 'Please provide a valid URL',
+      },
+    },
     email: {
       type: String,
       unique: true,
@@ -23,6 +30,14 @@ const usersModel = new mongoose.Schema(
         validator: validator.isEmail,
         message: 'Please provide your email address',
       },
+    },
+    physicalAddress: {
+      type: String,
+      required: [true, 'Please provide your physical address'],
+    },
+    phoneNumber: {
+      type: String,
+      required: [true, 'Please provide your phone number'],
     },
     banned: {
       type: Boolean,
@@ -35,7 +50,7 @@ const usersModel = new mongoose.Schema(
     },
     roles: {
       type: String,
-      enum: ['admin', 'user'],
+      enum: ['admin', 'user', 'member'],
       default: 'user',
     },
     dob: {

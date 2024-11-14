@@ -6,10 +6,11 @@ const transactionModel = new mongoose.Schema(
       type: Number,
       required: [true, 'Please provide amount'],
     },
-    type: {
+    accountType: {
       type: String,
-      enum: ['debit', 'credit'],
-      required: [true, 'Please provide account type'],
+      enum: ['savings', 'checking', 'loan'],
+      required: [true, 'Please provide your account type'],
+      default: 'savings',
     },
     reference: {
       type: String,
@@ -20,19 +21,30 @@ const transactionModel = new mongoose.Schema(
       required: [true, 'Please provide description'],
     },
     accountNumber: {
+      type: Number,
+      required: [true, 'Please provide account number'],
+    },
+    toAccountNumber: {
+      type: Number,
+    },
+    accountId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Account',
       required: true,
     },
-    toAccountId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Account',
-      required: false,
+      ref: 'User',
+      required: true,
     },
     status: {
       type: String,
-      enum: ['completed', 'pending', 'failed'],
-      default: 'completed',
+      enum: ['completed', 'pending', 'failed', 'canceled'],
+      default: 'pending',
+    },
+    transactionCharges: {
+      type: Number,
+      required: true,
     },
     transactionType: {
       type: String,

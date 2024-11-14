@@ -16,7 +16,15 @@ const {
 const sendResetPasswordEmail = require('../utils/sendResetPassword');
 
 const register = async (req, res) => {
-  const { email, dob, firstName, lastName, password } = req.body;
+  const {
+    email,
+    dob,
+    firstName,
+    lastName,
+    password,
+    phoneNumber,
+    physicalAddress,
+  } = req.body;
   const emailAlreadyExists = await User.findOne({ email });
   if (emailAlreadyExists) {
     throw new CustomError.BadRequestError('Email already exists');
@@ -34,8 +42,10 @@ const register = async (req, res) => {
     password,
     roles,
     verificationToken,
+    phoneNumber,
+    physicalAddress,
   });
-  const origin = 'http://localhost:3000';
+  const origin = 'http://localhost:5000';
   // const tempOrigin = req.get('origin');
   // const protocol = req.protocol;
   // const host = req.get('host');

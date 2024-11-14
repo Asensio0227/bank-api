@@ -14,9 +14,15 @@ const cors = require('cors');
 const mongoDb = require('./db/connect');
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandleMiddleware = require('./middleware/error-handle');
+const fileUpload = require('express-fileupload');
 
 const authRoute = require('./routes/authRoutes');
 const userRoute = require('./routes/userRoute');
+const accountRoute = require('./routes/accountRoute');
+const loanRoute = require('./routes/loanRoute');
+const reportRoute = require('./routes/reportRoute');
+const notificationRoute = require('./routes/notificationRoute');
+const transactionRoute = require('./routes/transactionRoute');
 
 app.set('trust-proxy', 1);
 app.use(
@@ -33,6 +39,7 @@ app.use(helmet());
 app.use(cors());
 app.use(xss());
 app.use(mongoSanitize());
+app.use(fileUpload());
 
 app.get('/', function (req, res) {
   res.send('Bank App');
@@ -43,10 +50,14 @@ app.get('/api/v1', (req, res) => {
   console.log(req.signedCookies);
   res.send('Bank App Api');
 });
-
 // routes
 app.use('/api/v1/auth', authRoute);
 app.use('/api/v1/user', userRoute);
+app.use('/api/v1/account', accountRoute);
+app.use('/api/v1/loan', loanRoute);
+app.use('/api/v1/report', reportRoute);
+app.use('/api/v1/notification', notificationRoute);
+app.use('/api/v1/transaction', transactionRoute);
 // middleware
 app.use(notFoundMiddleware);
 app.use(errorHandleMiddleware);
