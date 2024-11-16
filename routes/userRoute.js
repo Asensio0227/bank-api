@@ -15,12 +15,15 @@ const {
   deleteUser,
   uploadImageAccount,
 } = require('../controllers/userController');
+const { upload } = require('../middleware/multerMiddleware');
 
 router
   .route('/')
   .get(authenticateUser, authorizedPermissions('admin', 'member'), getAllUsers);
 router.route('/showMe').get(authenticateUser, showCurrentUser);
-router.route('/updateUser').patch(authenticateUser, updateUser);
+router
+  .route('/updateUser')
+  .patch(authenticateUser, upload.single('avatar'), updateUser);
 router.route('/updateUserPassword').patch(authenticateUser, updateUserPassword);
 router
   .route('/admin/upload')

@@ -12,11 +12,13 @@ const {
   retrieveLoanDetails,
   loanPayment,
   getAllLoan,
+  loanPaymentBalance,
   // admin || member
   getLoanApplications,
   approveLoanApplication,
   rejectLoanApplication,
   getSingleLoanApplications,
+  calculateTotalPayableLoanPerMonth,
 } = require('../controllers/loanController');
 
 // admin
@@ -26,6 +28,13 @@ router
     authenticateUser,
     authorizedPermissions('admin', 'member'),
     approveLoanApplication
+  );
+router
+  .route('/calculate/:id')
+  .patch(
+    authenticateUser,
+    authorizedPermissions('admin', 'member'),
+    calculateTotalPayableLoanPerMonth
   );
 router
   .route('/reject/:id')
@@ -53,6 +62,7 @@ router
 router.route('/apply').post(authenticateUser, applyForLoan);
 router.route('/').get(authenticateUser, getAllLoan);
 router.route('/:id').get(authenticateUser, retrieveLoanDetails);
+router.route('/loan-payment/:id').get(authenticateUser, loanPaymentBalance);
 router.route('/:id/repay').put(authenticateUser, loanPayment);
 
 module.exports = router;

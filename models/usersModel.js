@@ -15,12 +15,19 @@ const usersModel = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide your surname'],
     },
-    idea: {
+    IdeaNumber: {
+      type: String,
+      required: [true, 'Please provide your Idea Number'],
+    },
+    avatar: {
       type: String,
       validate: {
         validator: validator.isURL,
         message: 'Please provide a valid URL',
       },
+    },
+    avatarPublicId: {
+      type: String,
     },
     email: {
       type: String,

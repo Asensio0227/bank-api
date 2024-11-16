@@ -5,6 +5,8 @@ const Account = require('../models/AccountModel');
 // errors
 const CustomError = require('../errors');
 const rateLimit = require('../utils/cashLimit');
+const { checkPermissions } = require('../utils');
+const createQueryFilters = require('../utils/queryFilters');
 
 const depositTransactions = async (req, res) => {
   const { accountId } = req.body;
@@ -18,18 +20,24 @@ const depositTransactions = async (req, res) => {
   }
   req.body.accountNumber = isValidAccount.accountNumber;
   const initialBalance = isValidAccount.balance;
-  const charges = 0.0125 * req.body.amount;
-  const transactionFee = parseFloat(charges.toFixed(2));
+  const amount = Math.round(req.body.amount * 100);
+  const charges = Math.round(0.0125 * amount);
+  const transactionFee = charges;
   const depositAmount = req.body.amount - transactionFee;
   const newBalance = initialBalance + depositAmount;
   await Account.updateOne(
     { _id: accountId },
-    { $set: { balance: newBalance.toFixed(2) } }
+    { $set: { balance: newBalance } }
   );
   req.body.userId = req.user.userId;
   req.body.transactionCharges = transactionFee;
   req.body.status = 'completed';
-  const transaction = await Transaction.create(req.body);
+  const transaction = await Transaction.create({
+    ...req.body,
+    amount,
+    type: 'credit',
+    transactionType: 'deposit',
+  });
   res.status(StatusCodes.CREATED).json({ transaction });
 };
 
@@ -47,12 +55,13 @@ const withdrawalTransactions = async (req, res) => {
   if (!isValidAccount) {
     throw new CustomError.NotFoundError(`No account found for ${accountId}`);
   }
-
+  checkPermissions(req.user, isValidAccount.userId);
   req.body.accountNumber = isValidAccount.accountNumber;
   const initialBalance = isValidAccount.balance;
-  const charges = 0.0125 * req.body.amount;
-  const transactionFee = parseFloat(charges.toFixed(2));
-  const withDrawalAmount = req.body.amount - transactionFee;
+  const amount = Math.round(req.body.amount * 100);
+  const charges = Math.round(0.0125 * amount);
+  const transactionFee = charges;
+  const withDrawalAmount = amount - transactionFee;
 
   if (initialBalance < withDrawalAmount) {
     throw new CustomError.BadRequestError('Insufficient funds');
@@ -63,29 +72,35 @@ const withdrawalTransactions = async (req, res) => {
 
   await Account.updateOne(
     { _id: accountId },
-    { $set: { balance: newBalance.toFixed(2) } }
+    { $set: { balance: newBalance } }
   );
 
   req.body.userId = req.user.userId;
   req.body.transactionCharges = transactionFee;
   req.body.status = 'completed';
-  const transaction = await Transaction.create(req.body);
+  const transaction = await Transaction.create({
+    ...req.body,
+    amount,
+    type: 'debit',
+    transactionType: 'withdrawal',
+  });
   res.status(StatusCodes.CREATED).json({ transaction });
 };
 
 const transferTransactions = async (req, res) => {
-  console.log(req.body);
   const { accountId } = req.body;
   const isValidAccount = await Account.findOne({ _id: accountId });
 
   if (!isValidAccount) {
     throw new CustomError.NotFoundError('Account not found');
   }
+  checkPermissions(req.user, isValidAccount.userId);
   req.body.accountNumber = isValidAccount.accountNumber;
   const initialBalance = isValidAccount.balance;
-  const charges = 0.0125 * req.body.amount;
-  const transactionFee = parseFloat(charges.toFixed(2));
-  const withDrawalAmount = req.body.amount - transactionFee;
+  const amount = Math.round(req.body.amount * 100);
+  const charges = Math.round(0.0125 * amount);
+  const transactionFee = charges;
+  const withDrawalAmount = amount - transactionFee;
 
   if (initialBalance < withDrawalAmount) {
     throw new CustomError.BadRequestError('Insufficient funds');
@@ -95,11 +110,11 @@ const transferTransactions = async (req, res) => {
   const acc = await Account.findOne({
     accountNumber: req.body.toAccountNumber,
   });
-  const currentBalance = parseFloat(acc.balance);
-  const amountToAdd = parseFloat(req.body.amount);
-  const Balance = (currentBalance + amountToAdd).toFixed(2);
+  const currentBalance = acc.balance;
+  const amountToAdd = req.body.amount;
+  const Balance = currentBalance + amountToAdd;
 
-  const limit = rateLimit(req.body.amount, isValidAccount.overdraftLimit);
+  const limit = rateLimit(amount, isValidAccount.overdraftLimit);
 
   const writes = Account.updateOne(
     { _id: acc._id },
@@ -107,21 +122,59 @@ const transferTransactions = async (req, res) => {
   );
   const doc = Account.updateOne(
     { _id: accountId },
-    { $set: { balance: newBalance.toFixed(2) } }
+    { $set: { balance: newBalance } }
   );
   await Promise.all([limit, writes, doc]);
   req.body.userId = req.user.userId;
   req.body.transactionCharges = transactionFee;
   req.body.status = 'completed';
-  const transaction = await Transaction.create(req.body);
+  const transaction = await Transaction.create({
+    ...req.body,
+    type: 'debit',
+    amount,
+    transactionType: 'transfer',
+  });
   res.status(StatusCodes.CREATED).json({ transaction });
 };
 
 const retrieveTransactions = async (req, res) => {
-  const transactions = await Transaction.find({ userId: req.user.userId });
+  const { type, status, accountType, transactionType, sort } = req.query;
+  const queryObject = { userId: req.user.userId };
+  if (status && status !== 'all') {
+    queryObject.status = status;
+  }
+  if (accountType && accountType !== 'all') {
+    queryObject.accountType = accountType;
+  }
+  if (type && type !== 'all') {
+    queryObject.type = type;
+  }
+  if (transactionType && transactionType !== 'all') {
+    queryObject.transactionType = transactionType;
+  }
+
+  const { sortKey, skip, limit } = createQueryFilters(req, sort);
+  const transactions = await Transaction.find(queryObject)
+    .populate([
+      {
+        path: 'accountId',
+        select: 'accountNumber branchCode accountHolderName',
+      },
+      {
+        path: 'userId',
+        select: 'firstName lastName IdeaNumber email phoneNumber',
+      },
+    ])
+    .sort(sortKey)
+    .skip(skip)
+    .limit(limit);
+  const totalTransactions = await Transaction.countDocuments(queryObject);
+  const numOfPages = Math.ceil(totalTransactions / limit);
+  checkPermissions(req.user, transactions.userId);
+
   res
     .status(StatusCodes.CREATED)
-    .json({ transactions, length: transactions.length });
+    .json({ transactions, numOfPages, totalTransactions });
 };
 
 const retrieveSingleTransactions = async (req, res) => {
@@ -131,7 +184,47 @@ const retrieveSingleTransactions = async (req, res) => {
   if (!transactions) {
     throw new CustomError.NotFoundError('No transactions found');
   }
+  checkPermissions(req.user, transactions.userId);
   res.status(StatusCodes.CREATED).json({ transactions });
+};
+
+const getAllTransactions = async (req, res) => {
+  const { type, status, accountType, transactionType, sort } = req.query;
+  const queryObject = {};
+  if (status && status !== 'all') {
+    queryObject.status = status;
+  }
+  if (accountType && accountType !== 'all') {
+    queryObject.accountType = accountType;
+  }
+  if (type && type !== 'all') {
+    queryObject.type = type;
+  }
+  if (transactionType && transactionType !== 'all') {
+    queryObject.transactionType = transactionType;
+  }
+
+  const { sortKey, skip, limit } = createQueryFilters(req, sort);
+  const transactions = await Transaction.find(queryObject)
+    .populate([
+      {
+        path: 'accountId',
+        select: 'accountNumber branchCode accountHolderName',
+      },
+      {
+        path: 'userId',
+        select: 'firstName lastName IdeaNumber email phoneNumber',
+      },
+    ])
+    .sort(sortKey)
+    .skip(skip)
+    .limit(limit);
+  const totalTransactions = await Transaction.countDocuments(queryObject);
+  const numOfPages = Math.ceil(totalTransactions / limit);
+  checkPermissions(req.user, transactions.userId);
+  res
+    .status(StatusCodes.OK)
+    .json({ transactions, numOfPages, totalTransactions });
 };
 
 module.exports = {
@@ -140,4 +233,5 @@ module.exports = {
   transferTransactions,
   retrieveSingleTransactions,
   retrieveTransactions,
+  getAllTransactions,
 };

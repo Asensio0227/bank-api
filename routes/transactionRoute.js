@@ -12,8 +12,16 @@ const {
   transferTransactions,
   retrieveTransactions,
   retrieveSingleTransactions,
+  getAllTransactions,
 } = require('../controllers/transactionController');
 
+router
+  .route('/admin')
+  .get(
+    authenticateUser,
+    authorizedPermissions('admin', 'member'),
+    getAllTransactions
+  );
 router.route('/deposit').post(authenticateUser, depositTransactions);
 router.route('/withdraw').post(authenticateUser, withdrawalTransactions);
 router.route('/transfer').post(authenticateUser, transferTransactions);

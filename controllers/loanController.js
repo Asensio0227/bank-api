@@ -6,20 +6,27 @@ const Account = require('../models/AccountModel');
 const Transaction = require('../models/TransactionModel');
 // errors
 const CustomError = require('../errors');
-const { calculateTotalPayable } = require('../utils/loan');
+const {
+  processLoanPayment,
+  processTransactionPayment,
+  calculateMonthlyPayment,
+} = require('../utils/loan');
+const { checkPermissions } = require('../utils');
 
 // admin
 const approveLoanApplication = async (req, res) => {
+  const { monthlyPayment } = req.body;
   const loan = await Loan.findById(req.params.id);
 
   if (!loan) {
     throw new CustomError.NotFoundError(`No loan found for ${req.params.id}`);
   }
-
+  checkPermissions(req.user, loan.userId);
   loan.status = 'active';
   loan.applicationStatus = 'accepted';
   loan.totalAmount = loan.loanAmount;
   loan.remainingBalance = loan.loanAmount;
+  loan.monthlyPayment = Math.round(monthlyPayment * 100);
 
   await loan.save();
   res.status(StatusCodes.CREATED).json({ loan });
@@ -38,13 +45,63 @@ const rejectLoanApplication = async (req, res) => {
 };
 
 const getLoanApplications = async (req, res) => {
-  const loans = await Loan.find({});
-  res.status(StatusCodes.CREATED).json({ loans, length: loans.length });
+  const { applicationStatus, status, loanType, loanAmount, search, sort } =
+    req.query;
+  const queryObject = { userId: req.user.userId };
+  if (applicationStatus) queryObject.applicationStatus = applicationStatus;
+  if (status && status !== 'all ') queryObject.status = status;
+  if (loanType && loanType !== 'all ') queryObject.loanType = loanType;
+  if (search) {
+    queryObject.name = { $regex: search, $options: 'i' };
+    queryObject.phoneNumber = { $regex: search, $options: 'i' };
+    queryObject.email = { $regex: search, $options: 'i' };
+  }
+  let result = Loan.find(queryObject);
+  if (loanAmount) queryObject.loanAmount = loanAmount;
+  if (sort === 'oldest') {
+    result = result.sort('createdAt');
+  }
+  if (sort === 'latest') {
+    result = result.sort('-createdAt');
+  }
+  if (sort === 'z-a') {
+    result = result.sort('-name');
+  }
+  if (sort === 'a-z') {
+    result = result.sort('name');
+  }
+
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * 10;
+  result = result.skip(skip).limit(limit);
+  checkPermissions(req.user, loans.userId);
+  const loans = await result;
+  const totalLoans = await Loan.countDocuments(queryObject);
+  const numOfLoans = Math.ceil(totalLoans / limit);
+  res.status(StatusCodes.CREATED).json({ loans, totalLoans, numOfLoans });
 };
 
 const getSingleLoanApplications = async (req, res) => {
   const loans = await Loan.findOne({ _id: req.params.id });
+  checkPermissions(req.user, loans.userId);
   res.status(StatusCodes.CREATED).json({ loans });
+};
+
+const calculateTotalPayableLoanPerMonth = async (req, res) => {
+  const { amount, interestRate, loanTerm } = req.body;
+  const loanAmount = Math.round(amount * 100);
+  const loanData = { loanAmount, interestRate, loanTerm };
+
+  if (!loanAmount || !loanTerm || !interestRate) {
+    throw new CustomError.BadRequestError('Please provide all values');
+  }
+
+  const monthlyPayment = calculateMonthlyPayment(loanData);
+  req.body.userId = req.user.userId;
+  res
+    .status(StatusCodes.OK)
+    .json({ monthlyPayment, message: 'Loan created successfully!' });
 };
 
 // user
@@ -58,7 +115,8 @@ const applyForLoan = async (req, res) => {
   req.body.dob = user.dob;
   req.body.name = fName;
   req.body.userId = req.user.userId;
-  await Loan.create(req.body);
+  const loanAmount = Math.round(req.body.loanAmount * 100);
+  await Loan.create({ ...req.body, loanAmount });
 
   res.status(StatusCodes.CREATED).json({ msg: ' loan application in review' });
 };
@@ -69,72 +127,104 @@ const retrieveLoanDetails = async (req, res) => {
   if (!loan) {
     throw new CustomError.BadRequestError('No loan found');
   }
-
+  checkPermissions(req.user, loan.userId);
   res.status(StatusCodes.CREATED).json({ loan });
 };
 
-const loanPayment = async (req, res) => {
-  let { monthlyPayment } = req.body;
-  const { loan, totalPayable, monthlyInterestRatePayment } =
-    await calculateTotalPayable(monthlyPayment, req);
+const loanPaymentBalance = async (req, res) => {
+  const loan = await Loan.findOne({ _id: req.params.id });
 
-  if (monthlyInterestRatePayment === 0) {
-    monthlyPayment = monthlyPayment;
-  } else {
-    monthlyPayment = totalPayable;
+  if (!loan) {
+    throw new CustomError.BadRequestError('No loan found');
+  }
+  checkPermissions(req.user, loan.userId);
+  const loanAmount = loan.loanAmount;
+  const loanTerm = loan.loanTerm;
+  const interestRate = loan.interestRate;
+  const loadData = { loanTerm, interestRate, loanAmount };
+  const monthlyInterestRate = calculateMonthlyPayment(loadData);
+  const paymentCount = loan.payments.length;
+
+  if (interestRate === 0) {
+    const loanAmount = loan.loanAmount;
+    const loanTerm = loan.loanTerm;
+    const monthlyPayment = loanAmount / loanTerm;
+
+    res
+      .status(StatusCodes.CREATED)
+      .json({ monthlyPayment, totalOfPayments: paymentCount });
+    return;
   }
 
-  (loan.remainingBalance -= monthlyPayment).toFixed(2);
-  loan.payments.push({
-    month: new Date().getMonth() + 1,
-    monthlyPayment,
-    datePaid: new Date(),
+  res.status(StatusCodes.CREATED).json({
+    monthlyPayment: monthlyInterestRate,
+    balance: loan.remainingBalance,
+    totalOfPayments: paymentCount,
   });
+};
 
-  if (loan.remainingBalance <= 0) {
-    loan.status = 'paid';
-    loan.remainingBalance = 0;
-    await loan.save();
-  }
+const loanPayment = async (req, res) => {
+  const { amount } = req.body;
+  let monthlyPayment = Math.round(amount * 100);
   const acc = await Account.findOne({ accountNumber: req.body.accountNumber });
 
   if (!acc) {
     throw new CustomError.NotFoundError('No not found!');
   }
-
-  console.log(`===monthlyPayment===`);
-  console.log(monthlyPayment);
-  console.log(`===monthlyPayment===`);
   if (acc.balance < monthlyPayment) {
     throw new CustomError.BadRequestError('Insufficient funds!');
   }
 
-  (acc.balance -= monthlyPayment).toFixed(2);
-  const charges = 0.0125 * monthlyPayment;
-  const transactionFee = parseFloat(charges.toFixed(2));
+  acc.balance -= monthlyPayment;
   req.body.userId = req.user.userId;
-  const transaction = await Transaction.create({
-    amount: monthlyPayment,
-    accountId: acc._id,
-    status: 'completed',
-    transactionCharges: transactionFee,
-    description: 'Loan Payment',
-    transactionType: req.body.transactionType,
-    cartType: req.body.type,
-    accountNumber: req.body.accountNumber,
-    reference: req.body.reference,
-    userId: req.user.userId,
-  });
-  await loan.save();
-
+  const transaction = processTransactionPayment(req, acc._id);
+  const loan = processLoanPayment(req);
+  const account = acc.save();
+  const data = await Promise.all([account, transaction, loan]);
   res.status(StatusCodes.CREATED).json({
-    transaction,
+    data,
   });
 };
 
 const getAllLoan = async (req, res) => {
-  const loans = await Loan.find({ userId: req.user.userId });
-  res.status(StatusCodes.CREATED).json({ loans, length: loans.length });
+  const { applicationStatus, status, loanType, loanAmount, search, sort } =
+    req.query;
+  const queryObject = { userId: req.user.userId };
+  if (applicationStatus) queryObject.applicationStatus = applicationStatus;
+  if (status && status !== 'all ') queryObject.status = status;
+  if (loanType && loanType !== 'all ') queryObject.loanType = loanType;
+  if (search) {
+    queryObject.name = { $regex: search, $options: 'i' };
+    queryObject.phoneNumber = { $regex: search, $options: 'i' };
+    queryObject.email = { $regex: search, $options: 'i' };
+  }
+  let result = Loan.find(queryObject);
+  if (loanAmount) {
+    const loanAmountNumber = Number(loanAmount);
+    result = result.where('loanAmount').gte(loanAmountNumber);
+  }
+  if (sort === 'latest') {
+    result = result.sort('-createdAt');
+  }
+  if (sort === 'oldest') {
+    result = result.sort('createdAt');
+  }
+  if (sort === 'a-z') {
+    result = result.sort('name');
+  }
+  if (sort === 'z-a') {
+    result = result.sort('-name');
+  }
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  result = result.skip(skip).limit(limit);
+  checkPermissions(req.user, loans.userId);
+  const loans = await result;
+  const totalLoans = await Loan.countDocuments(queryObJect);
+  const numOfPage = Math.ceil(totalLoans / limit);
+
+  res.status(StatusCodes.CREATED).json({ loans, totalLoans, numOfPage });
 };
 
 module.exports = {
@@ -143,7 +233,9 @@ module.exports = {
   retrieveLoanDetails,
   loanPayment,
   getAllLoan,
+  loanPaymentBalance,
   // admin || member
+  calculateTotalPayableLoanPerMonth,
   getLoanApplications,
   approveLoanApplication,
   rejectLoanApplication,

@@ -16,10 +16,9 @@ const accountModel = new mongoose.Schema(
       required: [true, 'Please provide your account type'],
       default: 'savings',
     },
-    cardType: {
+    accountHolderName: {
       type: String,
-      enum: ['debit', 'credit'],
-      required: [true, 'Please provide card type'],
+      required: [true, 'Please provide your account holder name'],
     },
     accountNumber: {
       type: Number,
@@ -35,6 +34,11 @@ const accountModel = new mongoose.Schema(
       default: 1000,
     },
     userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,

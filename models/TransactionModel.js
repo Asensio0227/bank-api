@@ -16,6 +16,11 @@ const transactionModel = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide reference'],
     },
+    type: {
+      type: String,
+      enum: ['debit', 'credit'],
+      required: [true, 'Please provide type'],
+    },
     description: {
       type: String,
       required: [true, 'Please provide description'],

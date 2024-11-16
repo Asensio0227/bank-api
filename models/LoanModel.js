@@ -22,7 +22,7 @@ const LoanSchema = new mongoose.Schema(
       required: true,
     },
     loanAmount: { type: Number, required: true },
-    interestRate: { type: Number, default: 0.15 },
+    interestRate: { type: Number, default: 15 },
     totalAmount: { type: Number, default: 0 },
     remainingBalance: { type: Number, default: 0 },
     payments: [

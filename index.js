@@ -15,6 +15,7 @@ const mongoDb = require('./db/connect');
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandleMiddleware = require('./middleware/error-handle');
 const fileUpload = require('express-fileupload');
+const cloudinary = require('cloudinary');
 
 const authRoute = require('./routes/authRoutes');
 const userRoute = require('./routes/userRoute');
@@ -23,6 +24,12 @@ const loanRoute = require('./routes/loanRoute');
 const reportRoute = require('./routes/reportRoute');
 const notificationRoute = require('./routes/notificationRoute');
 const transactionRoute = require('./routes/transactionRoute');
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
 
 app.set('trust-proxy', 1);
 app.use(
