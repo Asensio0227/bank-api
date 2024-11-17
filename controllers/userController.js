@@ -1,6 +1,5 @@
 const { StatusCodes } = require('http-status-codes');
-const path = require('path');
-const cloud = require('cloudinary');
+const cloudinary = require('cloudinary').v2;
 
 const User = require('../models/usersModel');
 const CustomError = require('../errors');
@@ -60,7 +59,11 @@ const getSingleUser = async (req, res) => {
 };
 
 const showCurrentUser = async (req, res) => {
-  res.status(StatusCodes.OK).json({ user: req.user });
+  const user = await User.findOne({ _id: req.user.userId }).select(
+    '-password -isVerified -verificationToken -verified '
+  );
+  const userWithoutPassword = user.toJSON();
+  res.status(StatusCodes.OK).json({ userWithoutPassword });
 };
 
 const updateUser = async (req, res) => {
@@ -73,31 +76,29 @@ const updateUser = async (req, res) => {
   }
 
   if (req.file) {
-    const file = formatImage(req.file);
-    const response = await cloud.V2.uploader.upload(file);
-    newUser.avatar = response.secure_url;
-    newUser.avatarPublicI = response.public;
+    await formatImage(req.file, newUser);
   }
-
-  const user = await User.findOne({ _id: req.user.userId });
-
+  const user = await User.findById(req.user.userId).select(
+    '-password -isVerified -verificationToken -verified '
+  );
   checkPermissions(req.user, user._id);
-  user.email = email;
-  user.firstName = firstName;
-  user.lastName = lastName;
-  user.avatar = userImage;
-  user.avatarPublicI = userImagePublicId;
-  user.dob = dob;
+  user.email = newUser.email;
+  user.firstName = newUser.firstName;
+  user.lastName = newUser.lastName;
+  user.avatar = newUser.avatar;
+  user.avatarPublicId = newUser.avatarPublicId;
+  user.thumbnailUrl = newUser.thumbnailUrl;
+  user.dob = newUser.dob;
 
   const updateUser = await user.save();
 
   if (req.file && updateUser.avatarPublicId) {
-    await cloudinary.V2.uploader.destroy(updateUser.avatarPublicId);
+    await cloudinary.uploader.destroy(updateUser.avatarPublicId);
   }
 
   const tokenUser = createTokenUser(user);
   attachCookiesToResponse({ res, user: tokenUser });
-  res.status(StatusCodes.OK).json({ user: tokenUser });
+  res.status(StatusCodes.OK).json({ user: updateUser });
 };
 
 const updateUserPassword = async (req, res) => {
@@ -148,28 +149,6 @@ const deleteUser = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'deleteUser' });
 };
 
-const uploadImageAccount = async (req, res) => {
-  if (!req.files) {
-    throw new CustomError.BadRequestError('No file uploaded');
-  }
-
-  const file = req.files.image;
-
-  if (!file.mimetype.startsWith('image/')) {
-    throw new CustomError.BadRequestError('Invalid image type');
-  }
-
-  const maxSize = 1024 * 1024;
-
-  if (file.size > maxSize) {
-    throw new CustomError('Please upload image smaller than 1MB');
-  }
-
-  const imagePath = path.join(__dirname, '../public/uploads/' + `${file.name}`);
-  await file.mv(imagePath);
-  res.status(StatusCodes.OK).json({ image: `/uploads/${file.name}` });
-};
-
 module.exports = {
   getAllUsers,
   showCurrentUser,
@@ -178,5 +157,4 @@ module.exports = {
   updateUserPassword,
   updateUserStatus,
   deleteUser,
-  uploadImageAccount,
 };

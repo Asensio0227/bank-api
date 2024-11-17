@@ -23,8 +23,9 @@ const depositTransactions = async (req, res) => {
   const amount = Math.round(req.body.amount * 100);
   const charges = Math.round(0.0125 * amount);
   const transactionFee = charges;
-  const depositAmount = req.body.amount - transactionFee;
+  const depositAmount = transactionFee - req.body.amount;
   const newBalance = initialBalance + depositAmount;
+  console.log(depositAmount, newBalance);
   await Account.updateOne(
     { _id: accountId },
     { $set: { balance: newBalance } }
@@ -227,6 +228,40 @@ const getAllTransactions = async (req, res) => {
     .json({ transactions, numOfPages, totalTransactions });
 };
 
+const retrieveBankStatement = async (req, res) => {
+  const { startDate, endDate, sort, accountId } = req.query;
+  if (!startDate || !endDate || !accountId) {
+    throw new CustomError.BadRequestError('Please provide all values');
+  }
+  const queryObject = {
+    userId: req.user.userId,
+    accountId,
+    createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+  };
+
+  const { sortKey } = createQueryFilters(req, sort);
+
+  const transactions = await Transaction.find(queryObject)
+    .populate([
+      {
+        path: 'accountId',
+        select: 'accountNumber branchCode accountHolderName',
+      },
+      {
+        path: 'userId',
+        select: 'firstName lastName IdeaNumber email phoneNumber ',
+      },
+    ])
+    .sort(sortKey);
+
+  if (!transactions) {
+    throw new CustomError.NotFoundError(
+      'No transactions found for this period.'
+    );
+  }
+  res.status(StatusCodes.OK).json({ transactions });
+};
+
 module.exports = {
   depositTransactions,
   withdrawalTransactions,
@@ -234,4 +269,5 @@ module.exports = {
   retrieveSingleTransactions,
   retrieveTransactions,
   getAllTransactions,
+  retrieveBankStatement,
 };

@@ -16,43 +16,25 @@ const {
 const sendResetPasswordEmail = require('../utils/sendResetPassword');
 
 const register = async (req, res) => {
-  const {
-    email,
-    dob,
-    firstName,
-    lastName,
-    password,
-    phoneNumber,
-    physicalAddress,
-  } = req.body;
-  const emailAlreadyExists = await User.findOne({ email });
+  const userData = {
+    ...req.body,
+  };
+  const emailAlreadyExists = await User.findOne({ email: userData.email });
   if (emailAlreadyExists) {
     throw new CustomError.BadRequestError('Email already exists');
   }
 
   const isFirstAccount = (await User.countDocuments({})) === 0;
   const roles = isFirstAccount ? 'admin' : 'user';
-
-  const verificationToken = crypto.randomBytes(40).toString('hex');
+  const min = parseFloat(process.env.CRYPTO_MIN);
+  const max = parseFloat(process.env.CRYPTO_MAX);
+  const verificationToken = crypto.randomInt(min, max + 1);
   const user = await User.create({
-    email,
-    dob,
-    firstName,
-    lastName,
-    password,
+    ...userData,
     roles,
     verificationToken,
-    phoneNumber,
-    physicalAddress,
   });
   const origin = 'http://localhost:5000';
-  // const tempOrigin = req.get('origin');
-  // const protocol = req.protocol;
-  // const host = req.get('host');
-  // const forwardedHost = req.get('x-forwarded-host');
-  // const forwardedProtocol = req.get('x-forwarded-proto');
-  // const forwardedProtocol = req.get('x-forward-protocol');
-  // // const origin = `${forwardedProtocol}://${forwardedHost}`;
   const fName = `${user.firstName},${user.lastName}`;
 
   await sendVerificationEmail({

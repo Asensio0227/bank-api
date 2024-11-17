@@ -1,13 +1,20 @@
 const { StatusCodes } = require('http-status-codes');
 
 const Account = require('../models/AccountModel');
+const User = require('../models/usersModel');
 const CustomError = require('../errors');
 const { checkPermissions } = require('../utils');
 const createQueryFilters = require('../utils/queryFilters');
 
 const createAccount = async (req, res) => {
   req.body.createdBy = req.user.userId;
-  const account = await Account.create(req.body);
+  const user = await User.findOne({ ideaNumber: req.body.ideaNumber });
+  const fName = `${user.firstName},${user.lastName}`;
+  const account = await Account.create({
+    ...req.body,
+    accountHolderName: fName,
+    userId: user._id,
+  });
   res.status(StatusCodes.OK).json({ account });
 };
 
@@ -99,14 +106,6 @@ const deleteAccount = async (req, res) => {
   res
     .status(StatusCodes.OK)
     .json({ msg: 'Account has been deleted successfully!' });
-};
-
-const getBalance = async (req, res) => {
-  res.status(StatusCodes.CREATED).json({ msg: 'get Balance' });
-};
-
-const getAllTransactions = async (req, res) => {
-  res.status(StatusCodes.CREATED).json({ msg: 'get Balance' });
 };
 
 module.exports = {

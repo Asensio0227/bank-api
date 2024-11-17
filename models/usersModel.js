@@ -1,25 +1,38 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
-const path = require('jsonwebtoken');
 
 const usersModel = new mongoose.Schema(
   {
     firstName: {
       type: String,
       required: [true, 'Please provide your name'],
-      minlength: 5,
-      maxlength: 50,
+      minlenght: 5,
+      maxlength: 20,
+      trim: true,
     },
     lastName: {
       type: String,
       required: [true, 'Please provide your surname'],
+      minlenght: 2,
+      maxlength: 50,
+      trim: true,
     },
-    IdeaNumber: {
+    ideaNumber: {
       type: String,
       required: [true, 'Please provide your Idea Number'],
+      minlenght: 5,
+      maxlength: 20,
+      trim: true,
     },
     avatar: {
+      type: String,
+      validate: {
+        validator: validator.isURL,
+        message: 'Please provide a valid URL',
+      },
+    },
+    thumbnailUrl: {
       type: String,
       validate: {
         validator: validator.isURL,
@@ -29,6 +42,7 @@ const usersModel = new mongoose.Schema(
     avatarPublicId: {
       type: String,
     },
+
     email: {
       type: String,
       unique: true,
@@ -37,6 +51,9 @@ const usersModel = new mongoose.Schema(
         validator: validator.isEmail,
         message: 'Please provide your email address',
       },
+    },
+    expoToken: {
+      type: String,
     },
     physicalAddress: {
       type: String,
@@ -78,7 +95,7 @@ const usersModel = new mongoose.Schema(
       type: String,
     },
     verificationToken: {
-      type: String,
+      type: Number,
     },
   },
   { timestamps: true }

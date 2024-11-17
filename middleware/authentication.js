@@ -11,7 +11,9 @@ const authenticateUser = async (req, res, next) => {
   try {
     if (accessToken) {
       const payload = isTokenValid(accessToken);
-      req.user = payload.user;
+      const { roles, fName, userId } = payload.user;
+      const testUser = userId === '67399fb5106d0964e3ccdeb5';
+      req.user = { roles, fName, testUser, userId };
       return next();
     }
 
@@ -31,7 +33,9 @@ const authenticateUser = async (req, res, next) => {
       refreshToken: existingToken.refreshToken,
     });
 
-    req.user = payload.user;
+    const { roles, fName, userId } = payload.user;
+    const testUser = userId === '67399fb5106d0964e3ccdeb5';
+    req.user = { roles, fName, testUser, userId };
     next();
   } catch (error) {
     console.log(error);
@@ -47,7 +51,14 @@ const authorizedPermissions = (...roles) => {
   };
 };
 
+const checkForTestUser = (req, res, next) => {
+  if (req.user.testUser)
+    throw new CustomError.BadRequestError('Demo user. Read Only!');
+  next();
+};
+
 module.exports = {
   authenticateUser,
   authorizedPermissions,
+  checkForTestUser,
 };

@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 
 const {
-  authenticateUser,
   authorizedPermissions,
+  checkForTestUser,
 } = require('../middleware/authentication');
 const {
   getAllUsers,
@@ -13,38 +13,24 @@ const {
   updateUserPassword,
   updateUserStatus,
   deleteUser,
-  uploadImageAccount,
 } = require('../controllers/userController');
 const { upload } = require('../middleware/multerMiddleware');
+const { createPushToken } = require('../controllers/expoController');
 
-router
-  .route('/')
-  .get(authenticateUser, authorizedPermissions('admin', 'member'), getAllUsers);
-router.route('/showMe').get(authenticateUser, showCurrentUser);
+router.route('/').get(authorizedPermissions('admin', 'member'), getAllUsers);
+router.route('/showMe').get(showCurrentUser);
 router
   .route('/updateUser')
-  .patch(authenticateUser, upload.single('avatar'), updateUser);
-router.route('/updateUserPassword').patch(authenticateUser, updateUserPassword);
-router
-  .route('/admin/upload')
-  .post(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    uploadImageAccount
-  );
-router
-  .route('/')
-  .delete(authenticateUser, authorizedPermissions('admin'), deleteUser);
+  .patch(checkForTestUser, upload.single('avatar'), updateUser);
+router.route('/updateUserPassword').patch(checkForTestUser, updateUserPassword);
+router.route('/expo-token').post(createPushToken);
+router.route('/').delete(authorizedPermissions('admin'), deleteUser);
 router
   .route('/updateUserStatus/:id')
-  .patch(authenticateUser, authorizedPermissions('admin'), updateUserStatus);
-router.route('/:id').get(authenticateUser, getSingleUser);
+  .patch(authorizedPermissions('admin'), updateUserStatus);
+router.route('/:id').get(getSingleUser);
 router
   .route('/:id')
-  .delete(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    getSingleUser
-  );
+  .delete(authorizedPermissions('admin', 'member'), getSingleUser);
 
 module.exports = router;

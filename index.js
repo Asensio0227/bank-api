@@ -11,12 +11,14 @@ const helmet = require('helmet');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const cors = require('cors');
+const cloudinary = require('cloudinary').v2;
+// db
 const mongoDb = require('./db/connect');
+// middleware
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandleMiddleware = require('./middleware/error-handle');
-const fileUpload = require('express-fileupload');
-const cloudinary = require('cloudinary');
-
+const { authenticateUser } = require('./middleware/authentication');
+// routes
 const authRoute = require('./routes/authRoutes');
 const userRoute = require('./routes/userRoute');
 const accountRoute = require('./routes/accountRoute');
@@ -39,14 +41,15 @@ app.use(
   })
 );
 
-app.use(morgan('dev'));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 app.use(express.json());
 app.use(cookieParser(process.env.JWT_SECRET));
 app.use(helmet());
 app.use(cors());
 app.use(xss());
 app.use(mongoSanitize());
-app.use(fileUpload());
 
 app.get('/', function (req, res) {
   res.send('Bank App');
@@ -59,17 +62,18 @@ app.get('/api/v1', (req, res) => {
 });
 // routes
 app.use('/api/v1/auth', authRoute);
-app.use('/api/v1/user', userRoute);
-app.use('/api/v1/account', accountRoute);
-app.use('/api/v1/loan', loanRoute);
-app.use('/api/v1/report', reportRoute);
-app.use('/api/v1/notification', notificationRoute);
-app.use('/api/v1/transaction', transactionRoute);
+app.use('/api/v1/user', authenticateUser, userRoute);
+app.use('/api/v1/account', authenticateUser, accountRoute);
+app.use('/api/v1/loan', authenticateUser, loanRoute);
+app.use('/api/v1/report', authenticateUser, reportRoute);
+app.use('/api/v1/notification', authenticateUser, notificationRoute);
+app.use('/api/v1/transaction', authenticateUser, transactionRoute);
 // middleware
 app.use(notFoundMiddleware);
 app.use(errorHandleMiddleware);
 
-const port = process.env.PORT || 5000;
+// const port = process.env.PORT || 5000;
+const port = 3000;
 
 const start = async () => {
   try {
