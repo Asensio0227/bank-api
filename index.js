@@ -76,12 +76,12 @@ app.use('/api/v1/message', authenticateUser, messageRoute);
 app.use(notFoundMiddleware);
 app.use(errorHandleMiddleware);
 
-const port = process.env.HOST || 5000;
+const port = process.env.port || 5000;
 
 const start = async () => {
   try {
     await mongoDb(process.env.MONGO_URL);
-    app.listen(port, () => {
+    app.listen(port, '0.0.0.0', () => {
       console.log(`Server listening on ${port}...`);
     });
   } catch (error) {
