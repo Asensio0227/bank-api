@@ -1,9 +1,14 @@
-const mongoose = requirE('mongoose');
+const mongoose = require('mongoose');
 
 const messagesModel = new mongoose.Schema(
   {
-    text,
-    userId: {
+    text: {
+      type: String,
+    },
+    avatar: {
+      type: String,
+    },
+    user: {
       type: mongoose.Types.ObjectId,
       ref: 'User',
       require: true,

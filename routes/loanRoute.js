@@ -1,10 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const {
-  authenticateUser,
-  authorizedPermissions,
-} = require('../middleware/authentication');
+const { authorizedPermissions } = require('../middleware/authentication');
 
 const {
   // user
@@ -24,45 +21,28 @@ const {
 // admin
 router
   .route('/approve/:id')
-  .post(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    approveLoanApplication
-  );
+  .post(authorizedPermissions('admin', 'member'), approveLoanApplication);
 router
   .route('/calculate/:id')
   .patch(
-    authenticateUser,
     authorizedPermissions('admin', 'member'),
     calculateTotalPayableLoanPerMonth
   );
 router
   .route('/reject/:id')
-  .patch(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    rejectLoanApplication
-  );
+  .patch(authorizedPermissions('admin', 'member'), rejectLoanApplication);
 router
   .route('/admin')
-  .get(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    getLoanApplications
-  );
+  .get(authorizedPermissions('admin', 'member'), getLoanApplications);
 router
   .route('/admin/:id')
-  .get(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    getSingleLoanApplications
-  );
+  .get(authorizedPermissions('admin', 'member'), getSingleLoanApplications);
 
 // user
-router.route('/apply').post(authenticateUser, applyForLoan);
-router.route('/').get(authenticateUser, getAllLoan);
-router.route('/:id').get(authenticateUser, retrieveLoanDetails);
-router.route('/loan-payment/:id').get(authenticateUser, loanPaymentBalance);
-router.route('/:id/repay').put(authenticateUser, loanPayment);
+router.route('/apply').post(applyForLoan);
+router.route('/').get(getAllLoan);
+router.route('/:id').get(retrieveLoanDetails);
+router.route('/loan-payment/:id').get(loanPaymentBalance);
+router.route('/:id/repay').put(loanPayment);
 
 module.exports = router;

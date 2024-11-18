@@ -1,10 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const {
-  authenticateUser,
-  authorizedPermissions,
-} = require('../middleware/authentication');
+const { authorizedPermissions } = require('../middleware/authentication');
 
 const {
   reportsOnTransactions,
@@ -17,34 +14,22 @@ const {
 
 router
   .route('/transactions/audit-logs')
-  .get(authenticateUser, authorizedPermissions('admin', 'member'), auditLogs);
+  .get(authorizedPermissions('admin', 'member'), auditLogs);
 router
   .route('/transactions/audit-logs')
-  .post(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    createReport
-  );
+  .post(authorizedPermissions('admin', 'member'), createReport);
 router
   .route('/transactions/audit-logs/:id')
-  .patch(authenticateUser, authorizedPermissions('admin'), reportUpdate);
+  .patch(authorizedPermissions('admin'), reportUpdate);
 router
   .route('/transactions/:userId')
-  .get(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    reportsOnTransactions
-  );
+  .get(authorizedPermissions('admin', 'member'), reportsOnTransactions);
 router
   .route('/transaction/:id')
-  .get(
-    authenticateUser,
-    authorizedPermissions('admin', 'member'),
-    getSingleReport
-  );
+  .get(authorizedPermissions('admin', 'member'), getSingleReport);
 
 router
   .route('/transactions/audit/ai/:id')
-  .post(authenticateUser, authorizedPermissions('admin'), createAuditReport);
+  .post(authorizedPermissions('admin'), createAuditReport);
 
 module.exports = router;

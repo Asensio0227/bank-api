@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const roomModel = new mongoose.Schema(
   {
     participantsArray: {
-      type: Array,
+      type: [String],
       required: true,
     },
     participants: {
@@ -12,12 +12,17 @@ const roomModel = new mongoose.Schema(
     },
     lastMessage: {
       type: Object,
-      required: true,
+      default: {},
     },
     status: {
       type: String,
       enum: ['online', 'offline'],
       default: 'offline',
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
   },
   { timestamps: true }

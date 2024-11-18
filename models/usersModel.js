@@ -74,7 +74,7 @@ const usersModel = new mongoose.Schema(
     },
     roles: {
       type: String,
-      enum: ['admin', 'user', 'member'],
+      enum: ['admin', 'user', 'member', 'assistant'],
       default: 'user',
     },
     dob: {

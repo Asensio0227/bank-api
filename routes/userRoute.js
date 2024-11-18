@@ -17,7 +17,9 @@ const {
 const { upload } = require('../middleware/multerMiddleware');
 const { createPushToken } = require('../controllers/expoController');
 
-router.route('/').get(authorizedPermissions('admin', 'member'), getAllUsers);
+router
+  .route('/')
+  .get(authorizedPermissions('admin', 'member', 'assistant'), getAllUsers);
 router.route('/showMe').get(showCurrentUser);
 router
   .route('/updateUser')
@@ -31,6 +33,6 @@ router
 router.route('/:id').get(getSingleUser);
 router
   .route('/:id')
-  .delete(authorizedPermissions('admin', 'member'), getSingleUser);
+  .delete(authorizedPermissions('admin', 'member', 'assistant'), getSingleUser);
 
 module.exports = router;
