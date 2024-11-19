@@ -14,6 +14,7 @@ const {
   hashString,
 } = require('../utils');
 const sendResetPasswordEmail = require('../utils/sendResetPassword');
+const { formatImage } = require('../middleware/multerMiddleware');
 
 const register = async (req, res) => {
   const userData = {
@@ -29,6 +30,9 @@ const register = async (req, res) => {
   const min = parseFloat(process.env.CRYPTO_MIN);
   const max = parseFloat(process.env.CRYPTO_MAX);
   const verificationToken = crypto.randomInt(min, max + 1);
+  if (req.file) {
+    await formatImage(req.file, userData);
+  }
   const user = await User.create({
     ...userData,
     roles,
