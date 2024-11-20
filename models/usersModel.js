@@ -92,7 +92,7 @@ const usersModel = new mongoose.Schema(
       default: false,
     },
     passwordToken: {
-      type: String,
+      type: Number,
     },
     verificationToken: {
       type: Number,

@@ -11,9 +11,9 @@ const authenticateUser = async (req, res, next) => {
   try {
     if (accessToken) {
       const payload = isTokenValid(accessToken);
-      const { roles, fName, userId } = payload.user;
+      const { roles, fName, userId, avatar } = payload.user;
       const testUser = userId === '67399fb5106d0964e3ccdeb5';
-      req.user = { roles, fName, testUser, userId };
+      req.user = { roles, fName, testUser, userId, avatar };
       return next();
     }
 
@@ -33,9 +33,9 @@ const authenticateUser = async (req, res, next) => {
       refreshToken: existingToken.refreshToken,
     });
 
-    const { roles, fName, userId } = payload.user;
+    const { roles, fName, userId, avatar } = payload.user;
     const testUser = userId === '67399fb5106d0964e3ccdeb5';
-    req.user = { roles, fName, testUser, userId };
+    req.user = { roles, fName, testUser, userId, avatar };
     next();
   } catch (error) {
     console.log(error);

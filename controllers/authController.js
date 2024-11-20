@@ -11,10 +11,8 @@ const {
   createTokenUser,
   attachCookiesToResponse,
   sendVerificationEmail,
-  hashString,
 } = require('../utils');
 const sendResetPasswordEmail = require('../utils/sendResetPassword');
-const { formatImage } = require('../middleware/multerMiddleware');
 
 const register = async (req, res) => {
   const userData = {
@@ -30,22 +28,16 @@ const register = async (req, res) => {
   const min = parseFloat(process.env.CRYPTO_MIN);
   const max = parseFloat(process.env.CRYPTO_MAX);
   const verificationToken = crypto.randomInt(min, max + 1);
-  if (req.file) {
-    await formatImage(req.file, userData);
-  }
   const user = await User.create({
     ...userData,
     roles,
     verificationToken,
   });
-  const origin = 'http://localhost:5000';
   const fName = `${user.firstName},${user.lastName}`;
-
   await sendVerificationEmail({
     name: fName,
     email: user.email,
     verificationToken: user.verificationToken,
-    origin,
   });
   res.status(StatusCodes.CREATED).json({
     msg: 'Success! Please check your email to verify account',
@@ -69,6 +61,11 @@ const verifyEmail = async (req, res) => {
 
   await user.save();
   res.status(StatusCodes.OK).json({ msg: 'Email verified!' });
+};
+// pending change
+const resendCode = async (req, res) => {
+  console.log(req.user);
+  res.status(StatusCodes.OK).json({ msg: 'code send' });
 };
 
 const login = async (req, res) => {
@@ -145,8 +142,10 @@ const forgotPassword = async (req, res) => {
 
   const user = await User.findOne({ email });
   if (user) {
-    const passwordToken = crypto.randomBytes(70).toString('hex');
-    const origin = 'http://localhost:5000';
+    const min = parseFloat(process.env.CRYPTO_MIN);
+    const max = parseFloat(process.env.CRYPTO_MAX);
+    const passwordToken = crypto.randomInt(min, max + 1);
+    const origin = 'https://bank-api-production-d10c.up.railway.app';
     const fName = `${user.firstName},${user.lastName}`;
     await sendResetPasswordEmail({
       name: fName,
@@ -157,8 +156,7 @@ const forgotPassword = async (req, res) => {
 
     const tenMinutes = 1000 * 60 * 10;
     const passwordTokenExpirationDate = new Date(Date.now() + tenMinutes);
-
-    user.passwordToken = hashString(passwordToken);
+    user.passwordToken = passwordToken;
     user.passwordTokenExpirationDate = passwordTokenExpirationDate;
     await user.save();
   }
@@ -178,7 +176,7 @@ const resetPassword = async (req, res) => {
     const currentDate = new Date();
 
     if (
-      user.passwordToken === hashString(token) &&
+      user.passwordToken === token &&
       user.passwordTokenExpirationDate > currentDate
     ) {
       user.password = password;
@@ -197,4 +195,5 @@ module.exports = {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  resendCode,
 };
