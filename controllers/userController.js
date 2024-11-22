@@ -78,7 +78,7 @@ const updateUser = async (req, res) => {
   if (req.file) {
     await formatImage(req.file, newUser);
   }
-  const user = await User.findById(req.user.userId).select(
+  const user = await User.findOne({ _id: req.user.userId }).select(
     '-password -isVerified -verificationToken -verified '
   );
   checkPermissions(req.user, user._id);
