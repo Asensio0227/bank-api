@@ -27,22 +27,13 @@ const usersModel = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      validate: {
-        validator: validator.isURL,
-        message: 'Please provide a valid URL',
-      },
     },
     thumbnailUrl: {
       type: String,
-      validate: {
-        validator: validator.isURL,
-        message: 'Please provide a valid URL',
-      },
     },
     avatarPublicId: {
       type: String,
     },
-
     email: {
       type: String,
       unique: true,
