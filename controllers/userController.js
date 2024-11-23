@@ -85,6 +85,7 @@ const updateUser = async (req, res) => {
   user.email = newUser.email;
   user.firstName = newUser.firstName;
   user.lastName = newUser.lastName;
+  user.phoneNumber = newUser.phoneNumber;
   user.avatar = newUser.avatar;
   user.avatarPublicId = newUser.avatarPublicId;
   user.thumbnailUrl = newUser.thumbnailUrl;
