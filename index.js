@@ -30,9 +30,13 @@ const roomRoute = require('./routes/roomRoute');
 const messageRoute = require('./routes/messageRoute');
 
 cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.CLOUD_API_KEY,
-  api_secret: process.env.CLOUD_API_SECRET,
+  // cloud_name: process.env.CLOUD_NAME,
+  // api_key: process.env.CLOUD_API_KEY,
+  // api_secret: process.env.CLOUD_API_SECRET,
+  cloud_name: `dv2liy3u7`,
+  api_key: `383238981471399`,
+  api_secret: `wtxknLAyyXC08YDCVwk58w4b4Rc`,
+  secure: true,
 });
 
 app.set('trust-proxy', 1);

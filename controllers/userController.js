@@ -10,6 +10,7 @@ const {
 } = require('../utils');
 const createQueryFilters = require('../utils/queryFilters');
 const { formatImage } = require('../middleware/multerMiddleware');
+const imageUpload = require('../utils/cloudinary');
 
 const getAllUsers = async (req, res) => {
   const { sort, search, roles, banned } = req.query;
@@ -74,29 +75,38 @@ const updateUser = async (req, res) => {
   if (!newUser) {
     throw new CustomError.BadRequestError('Please provide all values');
   }
-
-  if (req.file) {
-    const fileImage = formatImage(req.file);
-    const response = await cloudinary.uploader.upload(fileImage);
-    const { secure_url, url, public_id } = response;
-    newUser.thumbnailUrl = url;
-    newUser.avatar = secure_url;
-    newUser.avatarPublicId = public_id;
-  }
   const user = await User.findOne({ _id: req.user.userId });
   checkPermissions(req.user, user._id);
-  const updateUser = await User.findByIdAndUpdate(
-    req.user.userId,
-    newUser
-  ).select('-password -isVerified -verificationToken -verified ');
+  if (req.file) {
+    try {
+      const fileImage = formatImage(req.file);
+      const { url, thumbnailUrl, id } = await imageUpload(fileImage);
+      newUser.thumbnailUrl = thumbnailUrl;
+      newUser.avatar = url;
+      newUser.avatarPublicId = id;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+    }
+  }
+  user.avatar = newUser.avatar;
+  user.avatarPublicId = newUser.avatarPublicId;
+  user.thumbnailUrl = newUser.thumbnailUrl;
+  user.dob = newUser.dob;
+  user.phoneNumber = newUser.phoneNumber;
+  user.physicalAddress = newUser.physicalAddress;
+  user.email = newUser.email;
+  user.lastName = newUser.lastName;
+  user.firstName = newUser.firstName;
+  user.ideaNumber = newUser.ideaNumber;
+  await user.save();
 
-  if (req.file && updateUser.avatarPublicId) {
+  if (req.file && user.avatarPublicId) {
     await cloudinary.uploader.destroy(updateUser.avatarPublicId);
   }
 
   const tokenUser = createTokenUser(user);
   attachCookiesToResponse({ res, user: tokenUser });
-  res.status(StatusCodes.OK).json({ user: updateUser });
+  res.status(StatusCodes.OK).json({ user: 'User updated!' });
 };
 
 const updateUserPassword = async (req, res) => {
