@@ -76,13 +76,19 @@ const updateUser = async (req, res) => {
   }
 
   if (req.file) {
-    await formatImage(req.file, newUser);
+    const fileImage = formatImage(req.file);
+    const response = await cloudinary.uploader.upload(fileImage);
+    const { secure_url, url, public_id } = response;
+    newUser.thumbnailUrl = url;
+    newUser.avatar = secure_url;
+    newUser.avatarPublicId = public_id;
   }
-  const user = await User.findOne({ _id: req.user.userId }).select(
-    '-password -isVerified -verificationToken -verified '
-  );
+  const user = await User.findOne({ _id: req.user.userId });
   checkPermissions(req.user, user._id);
-  const updateUser = await User.findByIdAndUpdate(req.user.userId, newUser);
+  const updateUser = await User.findByIdAndUpdate(
+    req.user.userId,
+    newUser
+  ).select('-password -isVerified -verificationToken -verified ');
 
   if (req.file && updateUser.avatarPublicId) {
     await cloudinary.uploader.destroy(updateUser.avatarPublicId);
