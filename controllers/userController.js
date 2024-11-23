@@ -23,7 +23,7 @@ const getAllUsers = async (req, res) => {
   }
 
   if (banned) {
-    queryObject.banned = true;
+    queryObject.banned = banned;
   }
 
   if (search) {
