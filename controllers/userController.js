@@ -88,6 +88,7 @@ const updateUser = async (req, res) => {
       console.error('Cloudinary upload error:', error);
     }
   }
+
   user.avatar = newUser.avatar;
   user.avatarPublicId = newUser.avatarPublicId;
   user.thumbnailUrl = newUser.thumbnailUrl;
@@ -101,7 +102,7 @@ const updateUser = async (req, res) => {
   await user.save();
 
   if (req.file && user.avatarPublicId) {
-    await cloudinary.uploader.destroy(updateUser.avatarPublicId);
+    await cloudinary.uploader.destroy(user.avatarPublicId);
   }
 
   const tokenUser = createTokenUser(user);

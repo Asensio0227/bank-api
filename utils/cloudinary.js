@@ -13,10 +13,11 @@ function imageUpload(file) {
         },
         (error, result) => {
           if (result && result.secure_url) {
+            const { public_id, secure_url, url } = result;
             resolve({
-              url: result.secure_url,
-              thumbnailUrl: result.url,
-              id: result.public_id,
+              url: secure_url,
+              thumbnailUrl: url,
+              id: public_id,
             });
           }
           return reject({ message: error });
