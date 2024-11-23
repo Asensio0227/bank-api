@@ -82,16 +82,7 @@ const updateUser = async (req, res) => {
     '-password -isVerified -verificationToken -verified '
   );
   checkPermissions(req.user, user._id);
-  user.email = newUser.email;
-  user.firstName = newUser.firstName;
-  user.lastName = newUser.lastName;
-  user.phoneNumber = newUser.phoneNumber;
-  user.avatar = newUser.avatar;
-  user.avatarPublicId = newUser.avatarPublicId;
-  user.thumbnailUrl = newUser.thumbnailUrl;
-  user.dob = newUser.dob;
-
-  const updateUser = await user.save();
+  const updateUser = await User.findByIdAndUpdate(req.user.userId, newUser);
 
   if (req.file && updateUser.avatarPublicId) {
     await cloudinary.uploader.destroy(updateUser.avatarPublicId);

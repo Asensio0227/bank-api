@@ -9,10 +9,7 @@ const parser = new DataParser();
 const formatImage = async (file, newUser) => {
   const fileExtension = path.extname(file.originalname).toString();
   const fileImage = parser.format(fileExtension, file.buffer).content;
-  const response = await cloudinary.uploader.upload(fileImage, {
-    resource_type: 'auto',
-    folder: 'bank-image',
-  });
+  const response = await cloudinary.uploader.upload(fileImage);
   const { secure_url, url, public_id } = response;
   newUser.thumbnailUrl = url;
   newUser.avatar = secure_url;
