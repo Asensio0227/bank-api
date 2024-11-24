@@ -14,9 +14,7 @@ const imageUpload = require('../utils/cloudinary');
 
 const getAllUsers = async (req, res) => {
   const { sort, search, roles, banned } = req.query;
-  const queryObject = {
-    roles: { $in: ['user', 'member'] },
-  };
+  const queryObject = {};
 
   if (roles && roles !== 'all') {
     queryObject.roles = roles;
@@ -136,7 +134,6 @@ const updateUserStatus = async (req, res) => {
 
   const user = await User.findOne({
     _id: req.params.id,
-    roles: { $in: ['user', 'member', 'assistant'] },
   });
 
   if (!user) {
