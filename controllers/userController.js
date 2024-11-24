@@ -136,8 +136,13 @@ const updateUserStatus = async (req, res) => {
 
   const user = await User.findOne({
     _id: req.params.id,
-    roles: { $in: ['user', 'member'] },
+    roles: { $in: ['user', 'member', 'assistant'] },
   });
+
+  if (!user) {
+    throw new CustomError.NotFoundError('No user found.');
+  }
+
   user.banned = banned;
   user.roles = roles;
   await user.save();
