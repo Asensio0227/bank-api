@@ -18,6 +18,13 @@ const usersModel = new mongoose.Schema(
       maxlength: 50,
       trim: true,
     },
+    gender: {
+      type: String,
+      required: [true, 'Please provide your gender'],
+      minlenght: 2,
+      maxlength: 50,
+      trim: true,
+    },
     ideaNumber: {
       type: String,
       required: [true, 'Please provide your Idea Number'],
