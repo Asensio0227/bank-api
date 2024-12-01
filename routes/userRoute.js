@@ -26,13 +26,13 @@ router
   .patch(checkForTestUser, upload.single('avatar'), updateUser);
 router.route('/updateUserPassword').patch(checkForTestUser, updateUserPassword);
 router.route('/expo-token').post(createPushToken);
-router.route('/').delete(authorizedPermissions('admin'), deleteUser);
 router
   .route('/updateUserStatus/:id')
   .patch(authorizedPermissions('admin'), updateUserStatus);
-router.route('/:id').get(getSingleUser);
+// router.route('/:id').get(getSingleUser);
 router
   .route('/:id')
-  .delete(authorizedPermissions('admin', 'member', 'assistant'), getSingleUser);
+  .get(authorizedPermissions('admin', 'member', 'assistant'), getSingleUser);
+router.route('/:id').delete(authorizedPermissions('admin'), deleteUser);
 
 module.exports = router;
