@@ -148,15 +148,13 @@ const updateUserStatus = async (req, res) => {
 };
 
 const deleteUser = async (req, res) => {
-  const user = await User.findOne({
+  const user = await User.findOneAndDelete({
     _id: req.params.id,
   });
 
   if (!user) {
     throw new CustomError.NotFoundError(`No user with id : ${req.params.id}`);
   }
-  checkPermissions(req.user, user._id);
-  await user.delete();
   res.status(StatusCodes.OK).json({ msg: 'user deleted successfully!' });
 };
 
