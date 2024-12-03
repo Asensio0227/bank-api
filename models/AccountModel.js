@@ -12,7 +12,7 @@ const accountModel = new mongoose.Schema(
     },
     accountType: {
       type: String,
-      enum: ['savings', 'checking', 'loan'],
+      enum: ['savings', 'checking', 'loan', 'business'],
       required: [true, 'Please provide your account type'],
       default: 'savings',
     },
