@@ -81,7 +81,7 @@ const auditLogs = async (req, res) => {
       },
       {
         path: 'userId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'firstName lastName IdeaNumber email phoneNumber avatar',
       },
       {
         path: 'generatedByUserId',

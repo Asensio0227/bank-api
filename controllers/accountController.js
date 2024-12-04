@@ -40,7 +40,8 @@ const getAllAccounts = async (req, res) => {
     queryObject.accountType = accountType;
   }
 
-  const { sortKey, skip, limit } = createQueryFilters(req, sort);
+  const sortKeys = 'accountHolderName';
+  const { sortKey, skip, limit } = createQueryFilters(req, sort, sortKeys);
   const accounts = await Account.find(queryObject)
     .populate([
       {
