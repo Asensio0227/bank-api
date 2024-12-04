@@ -19,11 +19,11 @@ const createAccount = async (req, res) => {
 };
 
 const linkExistingAccount = async (req, res) => {
-  req.body.userId = req.user.userId;
   const account = await Account.findOne({
     accountNumber: req.body.accountNumber,
+    userId: req.user.userId,
   });
-  checkPermissions(req.user, account.user);
+  checkPermissions(req.user, account.userId);
 
   res.status(StatusCodes.OK).json({ account });
 };
@@ -77,19 +77,22 @@ const getAllAccounts = async (req, res) => {
 };
 
 const getAllUserAccounts = async (req, res) => {
-  const account = await Account.find({ userId: req.userId });
+  const account = await Account.find({ userId: req.user.userId });
   res.status(StatusCodes.OK).json({ account, length: account.length });
 };
 
 const getSingleAccount = async (req, res) => {
-  const account = await Account.findOne({ _id: req.params.id });
+  const account = await Account.findOne({
+    _id: req.params.id,
+    userId: req.user.userId,
+  });
 
   if (!account) {
     throw new CustomError.NotFoundError(
       `No account with id : ${req.params.id}`
     );
   }
-  checkPermissions(req.user, account.user);
+  checkPermissions(req.user, account.userId);
 
   res.status(StatusCodes.OK).json({ account });
 };
@@ -97,15 +100,40 @@ const getSingleAccount = async (req, res) => {
 const updateAccount = async (req, res) => {
   const { id: accountId } = req.params;
 
-  const account = await Account.findOneAndUpdate({ _id: accountId }, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const account = await Account.findOneAndUpdate(
+    { _id: accountId, userId: req.user.userId },
+    req.body,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
   if (!account) {
     throw new CustomError.NotFoundError(`No account with id : ${accountId}`);
   }
-  checkPermissions(req.user, account.user);
+  checkPermissions(req.user, account.userId);
+
+  res.status(StatusCodes.OK).json({ account });
+};
+
+const updateUserAccount = async (req, res) => {
+  const { id: accountId } = req.params;
+  const { overdraftLimit, accountNumber } = req.body;
+
+  const account = await Account.findOneAndUpdate(
+    { _id: accountId },
+    { overdraftLimit, accountNumber, userId: req.user.userId },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+
+  if (!account) {
+    throw new CustomError.NotFoundError(`No account with id : ${accountId}`);
+  }
+  checkPermissions(req.user, account.userId);
 
   res.status(StatusCodes.OK).json({ account });
 };
@@ -131,4 +159,5 @@ module.exports = {
   deleteAccount,
   updateAccount,
   linkExistingAccount,
+  updateUserAccount,
 };

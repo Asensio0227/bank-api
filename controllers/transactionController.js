@@ -170,7 +170,7 @@ const retrieveTransactions = async (req, res) => {
     .skip(skip)
     .limit(limit);
   const totalTransactions = await Transaction.countDocuments(queryObject);
-  const numOfPages = Math.ceil(totalTransactions / limit);
+  // const numOfPages = Math.ceil(totalTransactions / limit);
   checkPermissions(req.user, transactions.userId);
 
   const groupedTransactions = transactions.reduce(
@@ -191,7 +191,7 @@ const retrieveTransactions = async (req, res) => {
     transactions: groupedTransactions[accountNumber],
   }));
   const uniqueUserCount = Object.keys(groupedTransactions).length;
-  const numbOfPages = Math.ceil(uniqueUserCount / limit);
+  const numOfPages = Math.ceil(uniqueUserCount / limit);
 
   res
     .status(StatusCodes.CREATED)
