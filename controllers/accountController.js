@@ -36,7 +36,7 @@ const getAllAccounts = async (req, res) => {
     queryObject.accountHolderName = { $regex: search, $options: 'i' };
   }
 
-  if (accountType) {
+  if (accountType && accountType !== 'all') {
     queryObject.accountType = accountType;
   }
 
