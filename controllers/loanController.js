@@ -56,7 +56,12 @@ const getLoanApplications = async (req, res) => {
     queryObject.phoneNumber = { $regex: search, $options: 'i' };
     queryObject.email = { $regex: search, $options: 'i' };
   }
-  let result = Loan.find(queryObject);
+  let result = Loan.find(queryObject).populate([
+    {
+      path: 'userId',
+      select: 'firstName lastName IdeaNumber email phoneNumber avatar',
+    },
+  ]);
   if (loanAmount) queryObject.loanAmount = loanAmount;
   if (sort === 'oldest') {
     result = result.sort('createdAt');
@@ -77,9 +82,20 @@ const getLoanApplications = async (req, res) => {
   result = result.skip(skip).limit(limit);
   checkPermissions(req.user, loans.userId);
   const loans = await result;
+  const groupLoans = loans.reduce((acc, loan) => {
+    const userId = loan.userId._id.toString();
+    if (!acc[userId]) {
+      acc[userId] = { userId: loan.userId, loans: [] };
+    }
+    acc[userId].loans.push(loan);
+    return acc;
+  }, {});
+  const resultArray = Object.values(groupLoans);
   const totalLoans = await Loan.countDocuments(queryObject);
   const numOfLoans = Math.ceil(totalLoans / limit);
-  res.status(StatusCodes.CREATED).json({ loans, totalLoans, numOfLoans });
+  res
+    .status(StatusCodes.CREATED)
+    .json({ loans: resultArray, totalLoans, numOfLoans });
 };
 
 const getSingleLoanApplications = async (req, res) => {
@@ -198,7 +214,12 @@ const getAllLoan = async (req, res) => {
     queryObject.phoneNumber = { $regex: search, $options: 'i' };
     queryObject.email = { $regex: search, $options: 'i' };
   }
-  let result = Loan.find(queryObject);
+  let result = Loan.find(queryObject).populate([
+    {
+      path: 'userId',
+      select: 'firstName lastName IdeaNumber email phoneNumber avatar',
+    },
+  ]);
   if (loanAmount) {
     const loanAmountNumber = Number(loanAmount);
     result = result.where('loanAmount').gte(loanAmountNumber);

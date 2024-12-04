@@ -173,9 +173,27 @@ const retrieveTransactions = async (req, res) => {
   const numOfPages = Math.ceil(totalTransactions / limit);
   checkPermissions(req.user, transactions.userId);
 
+  const groupedTransactions = transactions.reduce(
+    (accumulator, transaction) => {
+      const accountNumber = transaction.accountId.accountNumber;
+      if (!accumulator[accountNumber]) {
+        accumulator[accountNumber] = [];
+      }
+
+      accumulator[accountNumber].push(transaction);
+
+      return accumulator;
+    },
+    {}
+  );
+  const resultArray = Object.keys(groupedTransactions).map((accountNumber) => ({
+    accountNumber,
+    transactions: groupedTransactions[accountNumber],
+  }));
+
   res
     .status(StatusCodes.CREATED)
-    .json({ transactions, numOfPages, totalTransactions });
+    .json({ transactions: resultArray, numOfPages, totalTransactions });
 };
 
 const retrieveSingleTransactions = async (req, res) => {
@@ -223,9 +241,42 @@ const getAllTransactions = async (req, res) => {
   const totalTransactions = await Transaction.countDocuments(queryObject);
   const numOfPages = Math.ceil(totalTransactions / limit);
   checkPermissions(req.user, transactions.userId);
-  res
-    .status(StatusCodes.OK)
-    .json({ transactions, numOfPages, totalTransactions });
+
+  const groupTransactions = transactions.reduce((acc, transaction) => {
+    const key = `${transaction.accountNumber}_${
+      transaction.createdAt.toISOString().split('T')[0]
+    }`;
+    if (!acc[key]) {
+      acc[key] = [transaction];
+    } else {
+      acc[key].push(transaction);
+    }
+    return acc;
+  }, {});
+  const groupedTransactions = transactions.reduce(
+    (accumulator, transaction) => {
+      const accountNumber = transaction.accountId.accountNumber;
+      if (!accumulator[accountNumber]) {
+        accumulator[accountNumber] = [];
+      }
+
+      accumulator[accountNumber].push(transaction);
+
+      return accumulator;
+    },
+    {}
+  );
+  const resultArray = Object.keys(groupedTransactions).map((accountNumber) => ({
+    accountNumber,
+    transactions: groupedTransactions[accountNumber],
+  }));
+  const resultedCreatedAtArray = Object.values(groupTransactions);
+  res.status(StatusCodes.OK).json({
+    transactions: resultArray,
+    numOfPages,
+    totalTransactions,
+    resultedCreatedAtArray,
+  });
 };
 
 const retrieveBankStatement = async (req, res) => {

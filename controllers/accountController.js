@@ -46,7 +46,7 @@ const getAllAccounts = async (req, res) => {
     .populate([
       {
         path: 'userId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'firstName lastName IdeaNumber email phoneNumber avatar',
       },
       {
         path: 'createdBy',
@@ -59,7 +59,20 @@ const getAllAccounts = async (req, res) => {
   const totalAccount = await Account.countDocuments(queryObject);
   const numbOfPage = Math.ceil(totalAccount / limit);
 
-  res.status(StatusCodes.OK).json({ accounts, totalAccount, numbOfPage });
+  const groupAccounts = accounts.reduce((acc, account) => {
+    const userId = account.userId._id.toString();
+    if (!acc[userId]) {
+      acc[userId] = { userId: account.userId, accounts: [] };
+    }
+    acc[userId].accounts.push(account);
+    return acc;
+  }, {});
+
+  const finalAccountsArray = Object.values(groupAccounts);
+
+  res
+    .status(StatusCodes.OK)
+    .json({ accounts: finalAccountsArray, totalAccount, numbOfPage });
 };
 
 const getAllUserAccounts = async (req, res) => {
