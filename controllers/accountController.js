@@ -57,7 +57,6 @@ const getAllAccounts = async (req, res) => {
     .skip(skip)
     .limit(limit);
   const totalAccount = await Account.countDocuments(queryObject);
-  const numbOfPage = Math.ceil(totalAccount / limit);
 
   const groupAccounts = accounts.reduce((acc, account) => {
     const userId = account.userId._id.toString();
@@ -69,6 +68,8 @@ const getAllAccounts = async (req, res) => {
   }, {});
 
   const finalAccountsArray = Object.values(groupAccounts);
+  const uniqueUserCount = Object.keys(groupAccounts).length;
+  const numbOfPage = Math.ceil(uniqueUserCount / limit);
 
   res
     .status(StatusCodes.OK)

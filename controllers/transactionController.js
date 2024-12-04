@@ -190,6 +190,8 @@ const retrieveTransactions = async (req, res) => {
     accountNumber,
     transactions: groupedTransactions[accountNumber],
   }));
+  const uniqueUserCount = Object.keys(groupedTransactions).length;
+  const numbOfPages = Math.ceil(uniqueUserCount / limit);
 
   res
     .status(StatusCodes.CREATED)

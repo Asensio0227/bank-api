@@ -92,10 +92,11 @@ const getLoanApplications = async (req, res) => {
   }, {});
   const resultArray = Object.values(groupLoans);
   const totalLoans = await Loan.countDocuments(queryObject);
-  const numOfLoans = Math.ceil(totalLoans / limit);
+  const uniqueUserCount = Object.keys(groupLoans).length;
+  const numOfPages = Math.ceil(uniqueUserCount / limit);
   res
     .status(StatusCodes.CREATED)
-    .json({ loans: resultArray, totalLoans, numOfLoans });
+    .json({ loans: resultArray, totalLoans, numOfPages });
 };
 
 const getSingleLoanApplications = async (req, res) => {
