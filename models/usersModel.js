@@ -31,6 +31,7 @@ const usersModel = new mongoose.Schema(
       minlenght: 5,
       maxlength: 20,
       trim: true,
+      unique: true,
     },
     avatar: {
       type: String,
@@ -60,6 +61,7 @@ const usersModel = new mongoose.Schema(
     phoneNumber: {
       type: String,
       required: [true, 'Please provide your phone number'],
+      unique: true,
     },
     banned: {
       type: Boolean,
