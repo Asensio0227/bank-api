@@ -185,11 +185,11 @@ const retrieveTransactions = async (req, res) => {
     .limit(limit);
   const totalTransactions = await Transaction.countDocuments(queryObject);
   // const numOfPages = Math.ceil(totalTransactions / limit);
-  checkPermissions(req.user, transactions[0].userId._id);
 
   const groupedTransactions = transactions.reduce(
     (accumulator, transaction) => {
       const accountId = transaction.accountId._id.toString();
+      checkPermissions(req.user, transaction.userId._id);
       if (!accumulator[accountId]) {
         accumulator[accountId] = [];
       }
