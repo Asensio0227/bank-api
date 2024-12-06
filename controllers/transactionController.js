@@ -65,7 +65,14 @@ const withdrawalTransactions = async (req, res) => {
   const withDrawalAmount = amount - transactionFee;
 
   if (initialBalance < withDrawalAmount) {
-    throw new CustomError.BadRequestError('Insufficient funds');
+    const failedTransaction = await Transaction.create({
+      ...req.body,
+      type: 'debit',
+      amount: withDrawalAmount,
+      status: 'failed',
+      transactionType: 'withdrawal',
+    });
+    return res.status(StatusCodes.CREATED).json({ failedTransaction });
   }
   const newBalance = initialBalance - withDrawalAmount;
 
@@ -89,7 +96,7 @@ const withdrawalTransactions = async (req, res) => {
 };
 
 const transferTransactions = async (req, res) => {
-  const { accountId } = req.body;
+  const { accountId } = req.params;
   const isValidAccount = await Account.findOne({ _id: accountId });
 
   if (!isValidAccount) {
@@ -104,7 +111,13 @@ const transferTransactions = async (req, res) => {
   const withDrawalAmount = amount - transactionFee;
 
   if (initialBalance < withDrawalAmount) {
-    throw new CustomError.BadRequestError('Insufficient funds');
+    const failedTransaction = await Transaction.create({
+      ...req.body,
+      type: 'debit',
+      amount: withDrawalAmount,
+      status: 'failed',
+    });
+    return res.status(StatusCodes.CREATED).json({ failedTransaction });
   }
   const newBalance = initialBalance - withDrawalAmount;
 

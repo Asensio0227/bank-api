@@ -53,7 +53,7 @@ const transactionModel = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ['deposit', 'withdrawal', 'transfer'],
+      enum: ['deposit', 'withdrawal', 'transfer', 'loan', 'payment'],
       required: true,
     },
   },
