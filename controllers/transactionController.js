@@ -189,20 +189,20 @@ const retrieveTransactions = async (req, res) => {
 
   const groupedTransactions = transactions.reduce(
     (accumulator, transaction) => {
-      const accountNumber = transaction.accountId.accountNumber;
-      if (!accumulator[accountNumber]) {
-        accumulator[accountNumber] = [];
+      const accountId = transaction.accountId._id.toString();
+      if (!accumulator[accountId]) {
+        accumulator[accountId] = [];
       }
 
-      accumulator[accountNumber].push(transaction);
+      accumulator[accountId].push(transaction);
 
       return accumulator;
     },
     {}
   );
-  const resultArray = Object.keys(groupedTransactions).map((accountNumber) => ({
-    accountNumber,
-    transactions: groupedTransactions[accountNumber],
+  const resultArray = Object.keys(groupedTransactions).map((accountId) => ({
+    accountId,
+    transactions: groupedTransactions[accountId],
   }));
   const uniqueUserCount = Object.keys(groupedTransactions).length;
   const numOfPages = Math.ceil(uniqueUserCount / limit);
