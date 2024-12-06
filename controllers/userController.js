@@ -29,7 +29,7 @@ const getAllUsers = async (req, res) => {
       { firstName: { $regex: search, $options: 'i' } },
       { lastName: { $regex: search, $options: 'i' } },
       { email: { $regex: search, $options: 'i' } },
-      { IdeaNumber: { $regex: search, $options: 'i' } },
+      { ideaNumber: { $regex: search, $options: 'i' } },
     ];
   }
 

@@ -139,8 +139,9 @@ const transferTransactions = async (req, res) => {
 };
 
 const retrieveTransactions = async (req, res) => {
+  const { accountNumber } = req.params;
   const { type, status, accountType, transactionType, sort } = req.query;
-  const queryObject = { userId: req.user.userId };
+  const queryObject = { userId: req.user.userId, accountNumber };
   if (status && status !== 'all') {
     queryObject.status = status;
   }
@@ -163,7 +164,7 @@ const retrieveTransactions = async (req, res) => {
       },
       {
         path: 'userId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
     ])
     .sort(sortKey)
@@ -234,7 +235,7 @@ const getAllTransactions = async (req, res) => {
       },
       {
         path: 'userId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
     ])
     .sort(sortKey)
@@ -282,13 +283,13 @@ const getAllTransactions = async (req, res) => {
 };
 
 const retrieveBankStatement = async (req, res) => {
-  const { startDate, endDate, sort, accountId } = req.query;
-  if (!startDate || !endDate || !accountId) {
+  const { startDate, endDate, sort, accountNumber } = req.query;
+  if (!startDate || !endDate || !accountNumber) {
     throw new CustomError.BadRequestError('Please provide all values');
   }
   const queryObject = {
     userId: req.user.userId,
-    accountId,
+    accountNumber,
     createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
   };
 
@@ -302,7 +303,7 @@ const retrieveBankStatement = async (req, res) => {
       },
       {
         path: 'userId',
-        select: 'firstName lastName IdeaNumber email phoneNumber ',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
     ])
     .sort(sortKey);

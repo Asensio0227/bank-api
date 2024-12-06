@@ -18,7 +18,7 @@ const reportsOnTransactions = async (req, res) => {
     queryObject.$or = [
       { accountNumber: new RegExp(search, 'i') },
       { accountHolderName: new RegExp(search, 'i') },
-      { IdeaNumber: new RegExp(search, 'i') },
+      { ideaNumber: new RegExp(search, 'i') },
     ];
   }
 
@@ -31,15 +31,15 @@ const reportsOnTransactions = async (req, res) => {
       },
       {
         path: 'userId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
       {
         path: 'generatedByUserId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
       {
         path: 'transactionId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'amount type accountNumber accountType',
       },
     ])
     .sort(sortKey)
@@ -68,7 +68,7 @@ const auditLogs = async (req, res) => {
     queryObject.$or = [
       { accountNumber: new RegExp(search, 'i') },
       { accountHolderName: { $regex: search, $options: 'i' } },
-      { IdeaNumber: { $regex: search, $options: 'i' } },
+      { ideaNumber: { $regex: search, $options: 'i' } },
     ];
   }
 
@@ -81,15 +81,15 @@ const auditLogs = async (req, res) => {
       },
       {
         path: 'userId',
-        select: 'firstName lastName IdeaNumber email phoneNumber avatar',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
       {
         path: 'generatedByUserId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
       {
         path: 'transactionId',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'amount type  accountNumber accountType',
       },
     ])
     .sort(sortKey)

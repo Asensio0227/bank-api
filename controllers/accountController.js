@@ -46,11 +46,11 @@ const getAllAccounts = async (req, res) => {
     .populate([
       {
         path: 'userId',
-        select: 'firstName lastName IdeaNumber email phoneNumber avatar',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
       {
         path: 'createdBy',
-        select: 'firstName lastName IdeaNumber email phoneNumber',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
     ])
     .sort(sortKey)

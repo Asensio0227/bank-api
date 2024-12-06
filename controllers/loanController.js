@@ -59,7 +59,7 @@ const getLoanApplications = async (req, res) => {
   let result = Loan.find(queryObject).populate([
     {
       path: 'userId',
-      select: 'firstName lastName IdeaNumber email phoneNumber avatar',
+      select: 'firstName lastName ideaNumber email phoneNumber avatar',
     },
   ]);
   if (loanAmount) queryObject.loanAmount = loanAmount;
@@ -218,7 +218,7 @@ const getAllLoan = async (req, res) => {
   let result = Loan.find(queryObject).populate([
     {
       path: 'userId',
-      select: 'firstName lastName IdeaNumber email phoneNumber avatar',
+      select: 'firstName lastName ideaNumber email phoneNumber avatar',
     },
   ]);
   if (loanAmount) {

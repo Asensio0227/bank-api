@@ -22,8 +22,8 @@ router
 router.route('/deposit').post(depositTransactions);
 router.route('/withdraw').post(withdrawalTransactions);
 router.route('/transfer').post(transferTransactions);
-router.route('/statement').post(retrieveBankStatement);
-router.route('/').get(retrieveTransactions);
+router.route('/statement/:accountNumber').post(retrieveBankStatement);
+router.route('/:accountNumber').get(retrieveTransactions);
 router.route('/:id').get(retrieveSingleTransactions);
 
 module.exports = router;
