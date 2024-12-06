@@ -42,6 +42,10 @@ const transactionModel = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    location: {
+      type: String,
+      required: true,
+    },
     status: {
       type: String,
       enum: ['completed', 'pending', 'failed', 'canceled'],
