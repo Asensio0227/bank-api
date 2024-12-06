@@ -185,7 +185,7 @@ const retrieveTransactions = async (req, res) => {
     .limit(limit);
   const totalTransactions = await Transaction.countDocuments(queryObject);
   // const numOfPages = Math.ceil(totalTransactions / limit);
-  checkPermissions(req.user, transactions.userId);
+  checkPermissions(req.user, transactions[0].userId._id);
 
   const groupedTransactions = transactions.reduce(
     (accumulator, transaction) => {

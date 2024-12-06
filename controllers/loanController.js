@@ -80,7 +80,7 @@ const getLoanApplications = async (req, res) => {
   const limit = Number(req.query.limit) || 10;
   const skip = (page - 1) * 10;
   result = result.skip(skip).limit(limit);
-  checkPermissions(req.user, loans.userId);
+  checkPermissions(req.user, loans[0].userId._id);
   const loans = await result;
   const groupLoans = loans.reduce((acc, loan) => {
     const userId = loan.userId._id.toString();
@@ -241,7 +241,7 @@ const getAllLoan = async (req, res) => {
   const limit = Number(req.query.limit) || 10;
   const skip = (page - 1) * limit;
   result = result.skip(skip).limit(limit);
-  checkPermissions(req.user, loans.userId);
+  checkPermissions(req.user, loans[0].userId._id);
   const loans = await result;
   const totalLoans = await Loan.countDocuments(queryObJect);
   const numOfPage = Math.ceil(totalLoans / limit);
