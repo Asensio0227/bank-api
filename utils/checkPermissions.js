@@ -1,7 +1,6 @@
 const CustomError = require('../errors');
 
 const checkPermissions = (requestUser, resourceUserId) => {
-  console.log({ requestUser, resourceUserId });
   if (
     requestUser.roles === 'admin' ||
     requestUser.roles === 'member' ||
