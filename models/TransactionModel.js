@@ -2,6 +2,10 @@ const mongoose = require('mongoose');
 
 const transactionModel = new mongoose.Schema(
   {
+    bank: {
+      type: String,
+      required: [true, 'Please provide bank name'],
+    },
     amount: {
       type: Number,
       required: [true, 'Please provide amount'],
@@ -31,6 +35,10 @@ const transactionModel = new mongoose.Schema(
     },
     toAccountNumber: {
       type: Number,
+    },
+    toUserAccountNumber: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
     accountId: {
       type: mongoose.Schema.Types.ObjectId,

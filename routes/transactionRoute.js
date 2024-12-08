@@ -13,6 +13,7 @@ const {
   retrieveBankStatement,
 } = require('../controllers/transactionController');
 
+router.route('/:accountNumber').get(retrieveTransactions);
 router
   .route('/admin')
   .get(
@@ -22,8 +23,8 @@ router
 router.route('/deposit').post(depositTransactions);
 router.route('/withdraw').post(withdrawalTransactions);
 router.route('/transfer').post(transferTransactions);
+
 router.route('/statement/:accountNumber').post(retrieveBankStatement);
-router.route('/:accountNumber').get(retrieveTransactions);
-router.route('/:id').get(retrieveSingleTransactions);
+router.route('/retrieve/:id').get(retrieveSingleTransactions);
 
 module.exports = router;

@@ -125,7 +125,7 @@ const transferTransactions = async (req, res) => {
     accountNumber: req.body.toAccountNumber,
   });
   const currentBalance = acc.balance;
-  const amountToAdd = req.body.amount;
+  const amountToAdd = req.body.amount * 100;
   const Balance = currentBalance + amountToAdd;
 
   const limit = rateLimit(amount, isValidAccount.overdraftLimit);
@@ -142,6 +142,7 @@ const transferTransactions = async (req, res) => {
   req.body.userId = req.user.userId;
   req.body.transactionCharges = transactionFee;
   req.body.status = 'completed';
+  req.body.status = acc.userId || acc.userId._id;
   const transaction = await Transaction.create({
     ...req.body,
     type: 'debit',
@@ -179,6 +180,10 @@ const retrieveTransactions = async (req, res) => {
         path: 'userId',
         select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
+      {
+        path: 'toUserAccountNumber',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
+      },
     ])
     .sort(sortKey)
     .skip(skip)
@@ -214,13 +219,27 @@ const retrieveTransactions = async (req, res) => {
 
 const retrieveSingleTransactions = async (req, res) => {
   req.body.userId = req.user.userId;
-  const transactions = await Transaction.find({ _id: req.params.id });
+  const transactions = await Transaction.find({ _id: req.params.id }).populate([
+    {
+      path: 'accountId',
+      select: 'accountNumber branchCode accountHolderName',
+    },
+    {
+      path: 'userId',
+      select: 'firstName lastName ideaNumber email phoneNumber avatar',
+    },
+    {
+      path: 'toUserAccountNumber',
+      select: 'firstName lastName ideaNumber email phoneNumber avatar',
+    },
+  ]);
 
   if (!transactions) {
     throw new CustomError.NotFoundError('No transactions found');
   }
-  checkPermissions(req.user, transactions.userId);
-  res.status(StatusCodes.CREATED).json({ transactions });
+  const userId = transactions[0].userId._id;
+  checkPermissions(req.user, userId);
+  res.status(StatusCodes.OK).json({ transactions });
 };
 
 const getAllTransactions = async (req, res) => {
@@ -248,6 +267,10 @@ const getAllTransactions = async (req, res) => {
       },
       {
         path: 'userId',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
+      },
+      {
+        path: 'toUserAccountNumber',
         select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
     ])
