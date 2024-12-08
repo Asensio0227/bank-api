@@ -31,7 +31,9 @@ const accountModel = new mongoose.Schema(
     },
     overdraftLimit: {
       type: Number,
-      default: 1000,
+      default: 100000,
+      min: 100000,
+      max: 10000000000,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,

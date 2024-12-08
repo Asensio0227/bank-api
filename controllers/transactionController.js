@@ -96,7 +96,7 @@ const withdrawalTransactions = async (req, res) => {
 };
 
 const transferTransactions = async (req, res) => {
-  const { accountId } = req.params;
+  const accountId = req.params.id;
   const isValidAccount = await Account.findOne({ _id: accountId });
 
   if (!isValidAccount) {
@@ -142,7 +142,7 @@ const transferTransactions = async (req, res) => {
   req.body.userId = req.user.userId;
   req.body.transactionCharges = transactionFee;
   req.body.status = 'completed';
-  req.body.status = acc.userId || acc.userId._id;
+  req.body.accountId = acc.userId || acc.userId._id;
   const transaction = await Transaction.create({
     ...req.body,
     type: 'debit',
