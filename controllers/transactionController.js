@@ -19,13 +19,12 @@ const depositTransactions = async (req, res) => {
     throw new CustomError.NotFoundError(`No account found for ${accountId}`);
   }
   req.body.accountNumber = isValidAccount.accountNumber;
-  const initialBalance = isValidAccount.balance;
   const amount = Math.round(req.body.amount * 100);
   const charges = Math.round(0.0125 * amount);
   const transactionFee = charges;
   const depositAmount = transactionFee - req.body.amount;
+  const initialBalance = isValidAccount.balance;
   const newBalance = initialBalance + depositAmount;
-  console.log(depositAmount, newBalance);
   await Account.updateOne(
     { _id: accountId },
     { $set: { balance: newBalance } }
@@ -58,11 +57,11 @@ const withdrawalTransactions = async (req, res) => {
   }
   checkPermissions(req.user, isValidAccount.userId);
   req.body.accountNumber = isValidAccount.accountNumber;
-  const initialBalance = isValidAccount.balance;
   const amount = Math.round(req.body.amount * 100);
   const charges = Math.round(0.0125 * amount);
   const transactionFee = charges;
-  const withDrawalAmount = amount - transactionFee;
+  const initialBalance = isValidAccount.balance - transactionFee;
+  const withDrawalAmount = amount;
 
   if (initialBalance < withDrawalAmount) {
     const failedTransaction = await Transaction.create({
@@ -76,7 +75,7 @@ const withdrawalTransactions = async (req, res) => {
   }
   const newBalance = initialBalance - withDrawalAmount;
 
-  await rateLimit(req.body.amount, isValidAccount.overdraftLimit);
+  await rateLimit(req.body.amount, isValidAccount.overdraftLimit, req.body);
 
   await Account.updateOne(
     { _id: accountId },
@@ -104,11 +103,11 @@ const transferTransactions = async (req, res) => {
   }
   checkPermissions(req.user, isValidAccount.userId);
   req.body.accountNumber = isValidAccount.accountNumber;
-  const initialBalance = isValidAccount.balance;
   const amount = Math.round(req.body.amount * 100);
   const charges = Math.round(0.0125 * amount);
   const transactionFee = charges;
-  const withDrawalAmount = amount - transactionFee;
+  const initialBalance = isValidAccount.balance - transactionFee;
+  const withDrawalAmount = initialBalance;
 
   if (initialBalance < withDrawalAmount) {
     const failedTransaction = await Transaction.create({
@@ -128,7 +127,7 @@ const transferTransactions = async (req, res) => {
   const amountToAdd = req.body.amount * 100;
   const Balance = currentBalance + amountToAdd;
 
-  const limit = rateLimit(amount, isValidAccount.overdraftLimit);
+  const limit = rateLimit(amount, isValidAccount.overdraftLimit, req.body);
 
   const writes = Account.updateOne(
     { _id: acc._id },
