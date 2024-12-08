@@ -237,7 +237,10 @@ const retrieveSingleTransactions = async (req, res) => {
   if (!transactions) {
     throw new CustomError.NotFoundError('No transactions found');
   }
-  const userId = transactions[0].userId._id;
+  const userId =
+    transactions[0]?.userId._id ||
+    transactions.userId ||
+    transactions.userId._id;
   checkPermissions(req.user, userId);
   res.status(StatusCodes.OK).json({ transactions });
 };
