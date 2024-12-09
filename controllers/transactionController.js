@@ -172,10 +172,6 @@ const retrieveTransactions = async (req, res) => {
   const transactions = await Transaction.find(queryObject)
     .populate([
       {
-        path: 'accountId',
-        select: 'accountNumber branchCode accountHolderName',
-      },
-      {
         path: 'userId',
         select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
@@ -192,7 +188,7 @@ const retrieveTransactions = async (req, res) => {
 
   const groupedTransactions = transactions.reduce(
     (accumulator, transaction) => {
-      const accountId = transaction.accountId._id.toString();
+      const accountId = transaction.accountId.toString();
       checkPermissions(req.user, transaction.userId._id);
       if (!accumulator[accountId]) {
         accumulator[accountId] = [];
