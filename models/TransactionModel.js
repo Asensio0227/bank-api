@@ -50,6 +50,11 @@ const transactionModel = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    receiverAccId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     location: {
       type: String,
       required: true,

@@ -141,7 +141,8 @@ const transferTransactions = async (req, res) => {
   req.body.userId = req.user.userId;
   req.body.transactionCharges = transactionFee;
   req.body.status = 'completed';
-  req.body.accountId = acc.accountId || acc.accountId._id;
+  req.body.accountId = acc._id;
+  req.body.receiverAccId = acc.userId;
   const transaction = await Transaction.create({
     ...req.body,
     type: 'debit',
@@ -154,7 +155,19 @@ const transferTransactions = async (req, res) => {
 const retrieveTransactions = async (req, res) => {
   const { accountNumber } = req.params;
   const { type, status, accountType, transactionType, sort } = req.query;
-  const queryObject = { userId: req.user.userId, accountNumber };
+  const queryObject = {
+    $and: [
+      {
+        $or: [{ userId: req.user.userId }, { receiverAccId: req.user.userId }],
+      },
+      {
+        $or: [
+          { accountNumber: accountNumber },
+          { toAccountNumber: accountNumber },
+        ],
+      },
+    ],
+  };
   if (status && status !== 'all') {
     queryObject.status = status;
   }
@@ -184,7 +197,7 @@ const retrieveTransactions = async (req, res) => {
     .skip(skip)
     .limit(limit);
   const totalTransactions = await Transaction.countDocuments(queryObject);
-  // const numOfPages = Math.ceil(totalTransactions / limit);
+  // const numOfPages = Math.ceil(totalTransactions / limit)
 
   const groupedTransactions = transactions.reduce(
     (accumulator, transaction) => {
