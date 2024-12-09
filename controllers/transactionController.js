@@ -141,7 +141,7 @@ const transferTransactions = async (req, res) => {
   req.body.userId = req.user.userId;
   req.body.transactionCharges = transactionFee;
   req.body.status = 'completed';
-  req.body.accountId = acc.userId || acc.userId._id;
+  req.body.accountId = acc.accountId || acc.accountId._id;
   const transaction = await Transaction.create({
     ...req.body,
     type: 'debit',
