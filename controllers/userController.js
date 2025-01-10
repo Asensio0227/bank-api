@@ -16,7 +16,7 @@ const getAllUsers = async (req, res) => {
   const { sort, search, roles, banned } = req.query;
   const queryObject = {};
 
-  if (roles && roles !== 'all') {
+  if (roles && roles.trim() !== 'all') {
     queryObject.roles = roles;
   }
 
@@ -158,6 +158,29 @@ const deleteUser = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'user deleted successfully!' });
 };
 
+const getAllAssistant = async (req, res) => {
+  const { sort } = req.query;
+  const sortKeys = 'lastName';
+  const { sortKey, skip, limit } = createQueryFilters(req, sort, sortKeys);
+  let user;
+  if (req.user.roles === 'user') {
+    user = await User.find({ roles: 'assistant' })
+      .select('-password')
+      .sort(sortKey)
+      .skip(skip)
+      .limit(limit);
+  } else if (req.user.roles === 'assistant') {
+    user = await User.find({ roles: 'user' })
+      .select('-password')
+      .sort(sortKey)
+      .skip(skip)
+      .limit(limit);
+  }
+  const totalUsers = await User.countDocuments({ roles: 'assistant' });
+  const numbOfPages = Math.ceil(totalUsers / limit);
+  res.status(StatusCodes.OK).json({ user, numbOfPages });
+};
+
 module.exports = {
   getAllUsers,
   showCurrentUser,
@@ -166,4 +189,5 @@ module.exports = {
   updateUserPassword,
   updateUserStatus,
   deleteUser,
+  getAllAssistant,
 };

@@ -21,6 +21,10 @@ const reportSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    accountNumber: {
+      type: Number,
+      required: [true, 'Please provide your account number'],
+    },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     totalTransactions: { type: Number, default: 0 },
@@ -29,6 +33,7 @@ const reportSchema = new mongoose.Schema(
     netBalance: { type: Number, default: 0 },
     isAudited: { type: Boolean },
     auditComments: { type: String },
+    desc: { type: String, required: [true, 'Please provide reason for audit'] },
     reportStatus: {
       type: String,
       enum: ['draft', 'finalized', 'archived'],

@@ -25,6 +25,11 @@ const LoanSchema = new mongoose.Schema(
     interestRate: { type: Number, default: 15 },
     totalAmount: { type: Number, default: 0 },
     remainingBalance: { type: Number, default: 0 },
+    startDate: { type: Date },
+    startDate: { type: Date },
+    description: {
+      type: String,
+    },
     payments: [
       {
         month: { type: Number },
@@ -35,7 +40,7 @@ const LoanSchema = new mongoose.Schema(
     loanTerm: { type: Number, required: true },
     loanType: {
       type: String,
-      enum: ['personal', 'mortgage', 'auto'],
+      enum: ['short-term', 'medium-term', 'long-term'],
       required: true,
     },
     monthlyPayment: { type: Number },
@@ -49,13 +54,19 @@ const LoanSchema = new mongoose.Schema(
       enum: ['pending', 'accepted', 'rejected'],
       default: 'pending',
     },
+    employmentStatus: {
+      type: String,
+      enum: ['employed', 'self-employed', 'unemployed', 'retired'],
+      default: 'self-employed',
+    },
     totalAmountPaid: { type: Number },
     income: { type: Number },
     creditScore: { type: Number },
     debtToIncomeRatio: { type: Number },
     disbursementDate: { type: Number },
-    collateralType: { type: String },
+    collateralType: { type: String, trim: true },
     collateralValue: { type: Number },
+    accountNumber: { type: Number, required: true },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

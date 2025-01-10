@@ -3,14 +3,15 @@ const Transaction = require('../models/TransactionModel');
 // errors
 const CustomError = require('../errors');
 const { StatusCodes } = require('http-status-codes');
-const auditTransactions = require('../utils/audit');
+const { auditTransactions } = require('../utils/audit');
 const createQueryFilters = require('../utils/queryFilters');
+const { checkPermissions } = require('../utils');
 
 const reportsOnTransactions = async (req, res) => {
   const { reportStatus, search, sort } = req.query;
   const queryObject = { userId: req.params.userId };
 
-  if (reportStatus && reportStatus !== 'all') {
+  if (reportStatus && reportStatus.trim() !== 'all') {
     queryObject.status = reportStatus;
   }
 
@@ -58,50 +59,126 @@ const reportsOnTransactions = async (req, res) => {
 const auditLogs = async (req, res) => {
   const { reportStatus, search, sort } = req.query;
   req.body.generatedByUserId = req.user.userId;
-  const queryObject = {};
+  let queryObject = {};
 
-  if (reportStatus && reportStatus !== 'all') {
-    queryObject.status = reportStatus;
+  if (reportStatus && reportStatus.trim() !== 'all') {
+    queryObject.reportStatus = reportStatus.trim();
   }
 
   if (search) {
-    queryObject.$or = [
-      { accountNumber: new RegExp(search, 'i') },
-      { accountHolderName: { $regex: search, $options: 'i' } },
-      { ideaNumber: { $regex: search, $options: 'i' } },
-    ];
+    const accountNumberSearch = Number(search);
+    if (!isNaN(accountNumberSearch)) {
+      queryObject.accountNumber = accountNumberSearch;
+    }
   }
 
-  const { sortKey, skip, limit } = createQueryFilters(req, sort);
-  const report = await Report.find(queryObject)
-    .populate([
-      {
-        path: 'accountId',
-        select: 'accountNumber branchCode accountHolderName',
+  const sortOptions = {
+    newest: '-createdAt',
+    oldest: 'createdAt',
+    'a-z': `firstName`,
+    'z-a': `-firstName`,
+  };
+  const selectedSortOption = sortOptions.newest;
+  let sortQuery = {};
+  if (selectedSortOption.startsWith('-')) {
+    sortQuery[`${selectedSortOption.slice(1)}`] = -1;
+  } else {
+    sortQuery[selectedSortOption] = 1;
+  }
+  const { skip, limit, page } = createQueryFilters(req, sort);
+  const result = await Report.aggregate([
+    {
+      $match: queryObject, // Match any filters applied from queryObject
+    },
+    {
+      $group: {
+        _id: '$userId',
+        reports: { $push: '$$ROOT' },
+        count: { $sum: 1 },
       },
-      {
-        path: 'userId',
-        select: 'firstName lastName ideaNumber email phoneNumber avatar',
+    },
+    {
+      $facet: {
+        metadata: [
+          { $count: 'total' }, // Count total number of grouped documents
+          { $addFields: { page, limit } }, // Add pagination info
+        ],
+        data: [
+          { $sort: sortQuery }, // Sort based on provided sortKey
+          { $skip: skip }, // Skip documents for pagination
+          { $limit: limit }, // Limit number of documents returned
+        ],
       },
-      {
-        path: 'generatedByUserId',
-        select: 'firstName lastName ideaNumber email phoneNumber avatar',
-      },
-      {
-        path: 'transactionId',
-        select: 'amount type  accountNumber accountType',
-      },
-    ])
-    .sort(sortKey)
-    .skip(skip)
-    .limit(limit);
-  const totalReport = await Report.countDocuments(queryObject);
-  const numOfPages = Math.ceil(totalReport / limit);
-  res.status(StatusCodes.OK).json({ report, totalReport, numOfPages });
+    },
+  ]);
+
+  const populatedResults = await Promise.all(
+    result[0].data.map(async (group) => {
+      const populatedGroup = await Report.populate(group.reports, [
+        {
+          path: 'accountId',
+          select: 'accountNumber branchCode accountHolderName',
+        },
+        {
+          path: 'userId',
+          select: 'firstName lastName ideaNumber email phoneNumber avatar',
+        },
+        {
+          path: 'generatedByUserId',
+          select: 'firstName lastName ideaNumber email phoneNumber avatar',
+        },
+        {
+          path: 'transactionId',
+          select: 'amount type accountNumber accountType',
+        },
+      ]);
+
+      return { ...group, reports: populatedGroup }; // Return group with populated reports
+    })
+  );
+
+  // Final result with metadata and populated data
+  const finalResult = {
+    metadata: result[0].metadata,
+    data: populatedResults,
+  };
+  const reports = finalResult.data.map((report) => report.reports);
+  const resp = reports.flatMap((item) => item);
+  const groupReports = resp.reduce((acc, report) => {
+    const userId = report.userId._id.toString() || report.userId.toString();
+    // const id = report._id.toString();
+    checkPermissions(req.user, userId);
+    if (!acc[userId]) {
+      acc[userId] = { userId: report.userId, reports: [] };
+    }
+    acc[userId].reports.push(report);
+    return acc;
+  }, {});
+
+  const resultArray = Object.values(groupReports);
+  const { total: totalReport, page: numOfPages } = finalResult.metadata[0];
+  res.status(StatusCodes.OK).json({ numOfPages, totalReport, resultArray });
 };
 
 const getSingleReport = async (req, res) => {
-  const report = await Report.findOne({ _id: req.params.id });
+  const report = await Report.findOne({ _id: req.params.id }).populate([
+    {
+      path: 'accountId',
+      select: 'accountNumber branchCode accountHolderName',
+    },
+    {
+      path: 'userId',
+      select: 'firstName lastName ideaNumber email phoneNumber avatar',
+    },
+    {
+      path: 'generatedByUserId',
+      select: 'firstName lastName ideaNumber email phoneNumber avatar',
+    },
+    {
+      path: 'transactionId',
+      select: 'amount type  accountNumber accountType',
+    },
+  ]);
   res.status(StatusCodes.OK).json({ report });
 };
 
@@ -124,9 +201,10 @@ const reportUpdate = async (req, res) => {
 };
 
 const createReport = async (req, res) => {
-  const { userId, accountId, startDate, endDate } = req.body;
+  const { userId, accountId, startDate, endDate, accountNumber, desc } =
+    req.body;
 
-  if (!accountId || !startDate || !endDate) {
+  if (!accountId || !startDate || !endDate || !desc) {
     throw new CustomError.BadRequestError('Please provide all values');
   }
 
@@ -143,10 +221,11 @@ const createReport = async (req, res) => {
     .filter((t) => t.type === 'debit')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const netBalance = totalCredits - totalDebits;
-
+  const netBalance = totalDebits - totalCredits;
   const report = await Report.create({
     accountId,
+    accountNumber,
+    desc,
     totalCredits,
     totalDebits,
     totalTransactions: transactions.length,
@@ -169,7 +248,8 @@ const createAuditReport = async (req, res) => {
   const auditResults = await auditTransactions(
     id,
     new Date(startDate),
-    new Date(endDate)
+    new Date(endDate),
+    req
   );
   const netBalance = auditResults.netBalance;
 

@@ -13,6 +13,12 @@ const messagesModel = new mongoose.Schema(
       ref: 'User',
       require: true,
     },
+    roomId: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Room',
+      require: true,
+    },
+    isRead: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

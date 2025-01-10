@@ -12,10 +12,11 @@ const {
   calculateMonthlyPayment,
 } = require('../utils/loan');
 const { checkPermissions } = require('../utils');
+const createQueryFilters = require('../utils/queryFilters');
 
 // admin
 const approveLoanApplication = async (req, res) => {
-  const { monthlyPayment } = req.body;
+  const { monthlyPayment, startDate, endDate } = req.body;
   const loan = await Loan.findById(req.params.id);
 
   if (!loan) {
@@ -26,7 +27,9 @@ const approveLoanApplication = async (req, res) => {
   loan.applicationStatus = 'accepted';
   loan.totalAmount = loan.loanAmount;
   loan.remainingBalance = loan.loanAmount;
-  loan.monthlyPayment = Math.round(monthlyPayment * 100);
+  loan.monthlyPayment = Number(Math.round(monthlyPayment * 100));
+  loan.startDate = startDate;
+  loan.endDate = endDate;
 
   await loan.save();
   res.status(StatusCodes.CREATED).json({ loan });
@@ -45,44 +48,123 @@ const rejectLoanApplication = async (req, res) => {
 };
 
 const getLoanApplications = async (req, res) => {
-  const { applicationStatus, status, loanType, loanAmount, search, sort } =
-    req.query;
-  const queryObject = { userId: req.user.userId };
-  if (applicationStatus) queryObject.applicationStatus = applicationStatus;
-  if (status && status !== 'all ') queryObject.status = status;
-  if (loanType && loanType !== 'all ') queryObject.loanType = loanType;
+  const {
+    applicationStatus,
+    status,
+    loanType,
+    loanAmount,
+    search,
+    sort,
+    employmentStatus,
+    minLoanAmount,
+    maxLoanAmount,
+  } = req.query;
+  let queryObject = {};
+  if (applicationStatus && applicationStatus.trim() !== 'all')
+    queryObject.applicationStatus = applicationStatus;
+  if (employmentStatus && employmentStatus.trim() !== 'all')
+    queryObject.employmentStatus = employmentStatus;
   if (search) {
     queryObject.name = { $regex: search, $options: 'i' };
     queryObject.phoneNumber = { $regex: search, $options: 'i' };
     queryObject.email = { $regex: search, $options: 'i' };
   }
-  let result = Loan.find(queryObject).populate([
-    {
-      path: 'userId',
-      select: 'firstName lastName ideaNumber email phoneNumber avatar',
-    },
-  ]);
-  if (loanAmount) queryObject.loanAmount = loanAmount;
-  if (sort === 'oldest') {
-    result = result.sort('createdAt');
+
+  if (loanAmount) {
+    const numericLoanAmount = Number(loanAmount);
+    if (!isNaN(numericLoanAmount)) {
+      queryObject.loanAmount = numericLoanAmount;
+    }
   }
-  if (sort === 'latest') {
-    result = result.sort('-createdAt');
-  }
-  if (sort === 'z-a') {
-    result = result.sort('-name');
-  }
-  if (sort === 'a-z') {
-    result = result.sort('name');
+  if (minLoanAmount) {
+    const numericMinLoanAmount = Number(minLoanAmount);
+    if (!isNaN(numericMinLoanAmount)) {
+      queryObject.loanAmount = {
+        ...queryObject.loanAmount,
+        $gte: numericMinLoanAmount,
+      }; // Greater than or equal to
+    }
   }
 
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
-  const skip = (page - 1) * 10;
-  result = result.skip(skip).limit(limit);
-  const loans = await result;
-  const groupLoans = loans.reduce((acc, loan) => {
-    const userId = loan.userId._id.toString();
+  if (maxLoanAmount) {
+    const numericMaxLoanAmount = Number(maxLoanAmount);
+    if (!isNaN(numericMaxLoanAmount)) {
+      queryObject.loanAmount = {
+        ...queryObject.loanAmount,
+        $lte: numericMaxLoanAmount,
+      }; // Less than or equal to
+    }
+  }
+  if (status && status.trim() !== 'all') {
+    queryObject.status = status;
+  }
+
+  if (loanType && loanType.trim() !== 'all') {
+    queryObject.loanType = loanType;
+  }
+
+  const sortOptions = {
+    newest: '-createdAt',
+    oldest: 'createdAt',
+    'a-z': `name`,
+    'z-a': `-name`,
+  };
+  const selectedSortOption = sortOptions.newest;
+  let sortQuery = {};
+  if (selectedSortOption.startsWith('-')) {
+    sortQuery[`${selectedSortOption.slice(1)}`] = -1;
+  } else {
+    sortQuery[selectedSortOption] = 1;
+  }
+  const { skip, limit, page } = createQueryFilters(req, sort);
+  const result = await Loan.aggregate([
+    {
+      $match: queryObject, // Match any filters applied from queryObject
+    },
+    {
+      $group: {
+        _id: '$userId',
+        loans: { $push: '$$ROOT' },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $facet: {
+        metadata: [
+          { $count: 'total' }, // Count total number of grouped documents
+          { $addFields: { page, limit } }, // Add pagination info
+        ],
+        data: [
+          { $sort: sortQuery }, // Sort based on provided sortKey
+          { $skip: skip }, // Skip documents for pagination
+          { $limit: limit }, // Limit number of documents returned
+        ],
+      },
+    },
+  ]);
+
+  const populatedResults = await Promise.all(
+    result[0].data.map(async (group) => {
+      const populatedGroup = await Loan.populate(group.loans, [
+        {
+          path: 'userId',
+          select: 'firstName lastName ideaNumber email phoneNumber avatar',
+        },
+      ]);
+
+      return { ...group, loans: populatedGroup }; // Return group with populated reports
+    })
+  );
+
+  // Final result with metadata and populated data
+  const finalResult = {
+    metadata: result[0]?.metadata,
+    data: populatedResults,
+  };
+  const loans = finalResult.data.map((item) => item.loans);
+  const resp = loans.flatMap((item) => item);
+  const groupLoans = resp.reduce((acc, loan) => {
+    const userId = loan.userId._id.toString() || loan.userId.toString();
     checkPermissions(req.user, userId);
     if (!acc[userId]) {
       acc[userId] = { userId: loan.userId, loans: [] };
@@ -90,13 +172,15 @@ const getLoanApplications = async (req, res) => {
     acc[userId].loans.push(loan);
     return acc;
   }, {});
+
   const resultArray = Object.values(groupLoans);
-  const totalLoans = await Loan.countDocuments(queryObject);
-  const uniqueUserCount = Object.keys(groupLoans).length;
-  const numOfPages = Math.ceil(uniqueUserCount / limit);
-  res
-    .status(StatusCodes.CREATED)
-    .json({ loans: resultArray, totalLoans, numOfPages });
+  const { total: totalLoans = 0, page: numOfPages = 1 } =
+    finalResult?.metadata[0] || {};
+  res.status(StatusCodes.OK).json({
+    loans: resultArray,
+    totalLoans: totalLoans,
+    numOfPages: numOfPages,
+  });
 };
 
 const getSingleLoanApplications = async (req, res) => {
@@ -106,8 +190,7 @@ const getSingleLoanApplications = async (req, res) => {
 };
 
 const calculateTotalPayableLoanPerMonth = async (req, res) => {
-  const { amount, interestRate, loanTerm } = req.body;
-  const loanAmount = Math.round(amount * 100);
+  const { loanAmount, interestRate, loanTerm } = req.body;
   const loanData = { loanAmount, interestRate, loanTerm };
 
   if (!loanAmount || !loanTerm || !interestRate) {
@@ -124,7 +207,7 @@ const calculateTotalPayableLoanPerMonth = async (req, res) => {
 // user
 const applyForLoan = async (req, res) => {
   const user = await User.findOne({ _id: req.user.userId });
-  let fName = `${user.firstName}, ${user.lastName}`;
+  let fName = `${user.firstName} ${user.lastName}`;
 
   req.body.email = user.email;
   req.body.phoneNumber = user.phoneNumber;
@@ -132,8 +215,18 @@ const applyForLoan = async (req, res) => {
   req.body.dob = user.dob;
   req.body.name = fName;
   req.body.userId = req.user.userId;
-  const loanAmount = Math.round(req.body.loanAmount * 100);
-  await Loan.create({ ...req.body, loanAmount });
+  const loanAmount = Number(Math.round(req.body.loanAmount * 100));
+  checkPermissions(req.user, req.body.userId);
+  const income = Number(Math.round(req.body.income * 100));
+  const monthlyPayment = Number(Math.round(req.body.monthlyPayment * 100));
+  const collateralValue = Number(Math.round(req.body.collateralValue * 100));
+  await Loan.create({
+    ...req.body,
+    loanAmount,
+    income,
+    monthlyPayment,
+    collateralValue,
+  });
 
   res.status(StatusCodes.CREATED).json({ msg: ' loan application in review' });
 };
@@ -155,7 +248,7 @@ const loanPaymentBalance = async (req, res) => {
     throw new CustomError.BadRequestError('No loan found');
   }
   checkPermissions(req.user, loan.userId);
-  const loanAmount = loan.loanAmount;
+  const loanAmount = Number(Math.round(loan.loanAmount / 100));
   const loanTerm = loan.loanTerm;
   const interestRate = loan.interestRate;
   const loadData = { loanTerm, interestRate, loanAmount };
@@ -174,7 +267,7 @@ const loanPaymentBalance = async (req, res) => {
   }
 
   res.status(StatusCodes.CREATED).json({
-    monthlyPayment: monthlyInterestRate,
+    monthlyPayment: monthlyInterestRate * 100,
     balance: loan.remainingBalance,
     totalOfPayments: paymentCount,
   });
@@ -182,20 +275,30 @@ const loanPaymentBalance = async (req, res) => {
 
 const loanPayment = async (req, res) => {
   const { amount } = req.body;
-  let monthlyPayment = Math.round(amount * 100);
+  let monthlyPayment = Number(Math.round(amount * 100));
   const acc = await Account.findOne({ accountNumber: req.body.accountNumber });
 
   if (!acc) {
     throw new CustomError.NotFoundError('No not found!');
   }
   if (acc.balance < monthlyPayment) {
-    throw new CustomError.BadRequestError('Insufficient funds!');
+    await Transaction.create({
+      ...req.body,
+      type: 'debit',
+      amount: monthlyPayment,
+      status: 'failed',
+      accountId: acc._id,
+      accountType: acc.accountType,
+      description: 'Insufficient funds!',
+    });
+    res.status(StatusCodes.CREATED).json({ msg: 'Insufficient funds!' });
+    return;
   }
 
   acc.balance -= monthlyPayment;
   req.body.userId = req.user.userId;
   const transaction = processTransactionPayment(req, acc._id);
-  const loan = processLoanPayment(req);
+  const loan = processLoanPayment(req, acc);
   const account = acc.save();
   const data = await Promise.all([account, transaction, loan]);
   res.status(StatusCodes.CREATED).json({
@@ -204,18 +307,29 @@ const loanPayment = async (req, res) => {
 };
 
 const getAllLoan = async (req, res) => {
-  const { applicationStatus, status, loanType, loanAmount, search, sort } =
-    req.query;
-  const queryObject = { userId: req.user.userId };
-  if (applicationStatus) queryObject.applicationStatus = applicationStatus;
-  if (status && status !== 'all ') queryObject.status = status;
-  if (loanType && loanType !== 'all ') queryObject.loanType = loanType;
+  const {
+    applicationStatus,
+    status,
+    loanType,
+    loanAmount,
+    search,
+    sort,
+    employmentStatus,
+  } = req.query;
+
+  let queryObJect = { userId: req.user.userId };
+
+  if (applicationStatus && applicationStatus.trim() !== 'all')
+    queryObJect.applicationStatus = applicationStatus;
+  if (employmentStatus && employmentStatus.trim() !== 'all')
+    queryObJect.employmentStatus = employmentStatus;
+
   if (search) {
-    queryObject.name = { $regex: search, $options: 'i' };
-    queryObject.phoneNumber = { $regex: search, $options: 'i' };
-    queryObject.email = { $regex: search, $options: 'i' };
+    queryObJect.name = { $regex: search, $options: 'i' };
+    queryObJect.phoneNumber = { $regex: search, $options: 'i' };
+    queryObJect.email = { $regex: search, $options: 'i' };
   }
-  let result = Loan.find(queryObject).populate([
+  let result = Loan.find(queryObJect).populate([
     {
       path: 'userId',
       select: 'firstName lastName ideaNumber email phoneNumber avatar',
@@ -225,7 +339,15 @@ const getAllLoan = async (req, res) => {
     const loanAmountNumber = Number(loanAmount);
     result = result.where('loanAmount').gte(loanAmountNumber);
   }
-  if (sort === 'latest') {
+
+  if (status && status.trim() !== 'all') {
+    result = result.where('status').equals(status);
+  }
+
+  if (loanType && loanType.trim() !== 'all') {
+    result = result.where('loanType').equals(loanType);
+  }
+  if (sort === 'newest') {
     result = result.sort('-createdAt');
   }
   if (sort === 'oldest') {
@@ -241,8 +363,11 @@ const getAllLoan = async (req, res) => {
   const limit = Number(req.query.limit) || 10;
   const skip = (page - 1) * limit;
   result = result.skip(skip).limit(limit);
-  checkPermissions(req.user, loans[0]?.userId._id);
   const loans = await result;
+  loans.length > 0 &&
+    loans.map((loan) => {
+      return checkPermissions(req.user, loan.userId._id);
+    });
   const totalLoans = await Loan.countDocuments(queryObJect);
   const numOfPage = Math.ceil(totalLoans / limit);
 

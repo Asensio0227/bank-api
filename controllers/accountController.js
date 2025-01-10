@@ -9,7 +9,7 @@ const createQueryFilters = require('../utils/queryFilters');
 const createAccount = async (req, res) => {
   req.body.createdBy = req.user.userId;
   const user = await User.findOne({ ideaNumber: req.body.ideaNumber });
-  const fName = `${user.firstName},${user.lastName}`;
+  const fName = `${user.firstName} ${user.lastName}`;
   const account = await Account.create({
     ...req.body,
     accountHolderName: fName,
@@ -36,7 +36,7 @@ const getAllAccounts = async (req, res) => {
     queryObject.accountHolderName = { $regex: search, $options: 'i' };
   }
 
-  if (accountType && accountType !== 'all') {
+  if (accountType && accountType.trim() !== 'all') {
     queryObject.accountType = accountType;
   }
 

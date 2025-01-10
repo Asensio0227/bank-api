@@ -21,7 +21,7 @@ const {
 // admin
 router
   .route('/approve/:id')
-  .post(authorizedPermissions('admin', 'member'), approveLoanApplication);
+  .put(authorizedPermissions('admin', 'member'), approveLoanApplication);
 router
   .route('/calculate/:id')
   .patch(

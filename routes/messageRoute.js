@@ -7,16 +7,16 @@ const {
   createMsg,
   retrieveAllMsg,
   deleteMsg,
-  retrieveMsg,
+  retrieveAdminAllMsg,
+  updateMsg,
 } = require('../controllers/messageController');
 
 router.route('/').post(createMsg);
-router.route('/').get(retrieveAllMsg);
+router.route('/:roomId').get(retrieveAllMsg);
+router.route('/:roomId').put(updateMsg);
+router.route('/:id').delete(deleteMsg);
 router
-  .route('/:id')
-  .delete(authorizedPermissions('admin', 'member'), deleteMsg);
-router
-  .route('/admin')
-  .get(authorizedPermissions('admin', 'member'), retrieveMsg);
+  .route('/admin/:roomId')
+  .get(authorizedPermissions('admin', 'member'), retrieveAdminAllMsg);
 
 module.exports = router;

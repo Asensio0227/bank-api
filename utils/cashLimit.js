@@ -1,7 +1,8 @@
+const { StatusCodes } = require('http-status-codes');
 const CustomError = require('../errors');
 const Transaction = require('../models/TransactionModel');
 
-async function rateLimit(amount, limit, data) {
+async function rateLimit(amount, limit, req, res) {
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const recentTransactions = await Transaction.find({
     createdAt: { $gte: oneWeekAgo },
@@ -14,7 +15,8 @@ async function rateLimit(amount, limit, data) {
 
   if (totalWithdrawnThisWeek + amount > limit) {
     const failedTransaction = await Transaction.create({
-      ...data,
+      ...req.body,
+      accountId: req.params.id,
       description: `You have exceeded your limit. You can only withdraw $${limit} per week.`,
       type: 'debit',
       amount,

@@ -58,6 +58,9 @@ const usersModel = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide your physical address'],
     },
+    loginHistory: {
+      type: Array,
+    },
     phoneNumber: {
       type: String,
       required: [true, 'Please provide your phone number'],

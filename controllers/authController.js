@@ -33,7 +33,7 @@ const register = async (req, res) => {
     roles,
     verificationToken,
   });
-  const fName = `${user.firstName},${user.lastName}`;
+  const fName = `${user.firstName} ${user.lastName}`;
   await sendVerificationEmail({
     name: fName,
     email: user.email,
@@ -69,7 +69,7 @@ const resendCode = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, location } = req.body;
 
   if (!email || !password) {
     throw new CustomError.BadRequestError('Please provide email and password');
@@ -81,7 +81,14 @@ const login = async (req, res) => {
   }
   const isPasswordCorrect = await user.ComparePassword(password);
 
-  if (!isPasswordCorrect) {
+  if (isPasswordCorrect) {
+    user.loginHistory.push({
+      timestamp: new Date(),
+      location,
+    });
+
+    await user.save();
+  } else {
     throw new CustomError.UnauthenticatedError('Invalid Credentials');
   }
   if (!user.isVerified) {
@@ -146,7 +153,7 @@ const forgotPassword = async (req, res) => {
     const max = parseFloat(process.env.CRYPTO_MAX);
     const passwordToken = crypto.randomInt(min, max + 1);
     const origin = 'https://bank-api-production-d10c.up.railway.app';
-    const fName = `${user.firstName},${user.lastName}`;
+    const fName = `${user.firstName} ${user.lastName}`;
     await sendResetPasswordEmail({
       name: fName,
       email: user.email,

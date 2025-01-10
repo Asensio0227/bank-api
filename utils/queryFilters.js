@@ -15,6 +15,7 @@ function createQueryFilters(req, sort, sortKeys) {
     sortKey,
     skip,
     limit,
+    page,
   };
 }
 

@@ -5,7 +5,7 @@ const { StatusCodes } = require('http-status-codes');
 
 const createMsg = async (req, res) => {
   const { roomId, text } = req.body;
-  const message = await Message.create({ text, user: req.user.userId });
+  const message = await Message.create({ text, user: req.user.userId, roomId });
   lastMessage = message;
   const room = await Room.findOne({
     _id: roomId,
@@ -16,16 +16,27 @@ const createMsg = async (req, res) => {
 };
 
 const retrieveAllMsg = async (req, res) => {
-  const messages = await Message.find({ user: req.user.userId }).sort(
-    '-createdAt'
-  );
-  const totalMessages = await Message.countDocuments({ user: req.user.userId });
+  const messages = await Message.find({ roomId: req.params.roomId })
+    .sort('-createdAt')
+    .populate({
+      path: 'user',
+      select: 'firstName lastName expoToken email  avatar',
+    });
+  const totalMessages = await Message.countDocuments({
+    roomId: req.params.roomId,
+  });
   res.status(StatusCodes.OK).json({ totalMessages, messages });
 };
-
-const retrieveMsg = async (req, res) => {
-  const messages = await Message.find({}).sort('-createdAt');
-  const totalMessages = await Message.countDocuments({});
+const retrieveAdminAllMsg = async (req, res) => {
+  const messages = await Message.find({ roomId: req.params.roomId })
+    .sort('-createdAt')
+    .populate({
+      path: 'user',
+      select: 'firstName lastName expoToken email  avatar',
+    });
+  const totalMessages = await Message.countDocuments({
+    roomId: req.params.roomId,
+  });
   res.status(StatusCodes.OK).json({ totalMessages, messages });
 };
 
@@ -35,9 +46,23 @@ const deleteMsg = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'Message deleted!' });
 };
 
+const updateMsg = async (req, res) => {
+  const message = await Message.updateMany(
+    {
+      roomId: req.params.roomId,
+      'user._id': { $ne: req.user.userId },
+    },
+    { $set: { isRead: true } }
+  );
+  res
+    .status(StatusCodes.OK)
+    .json({ msg: 'Message updated successfully!', message });
+};
+
 module.exports = {
   createMsg,
   retrieveAllMsg,
   deleteMsg,
-  retrieveMsg,
+  retrieveAdminAllMsg,
+  updateMsg,
 };

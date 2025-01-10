@@ -9,6 +9,15 @@ const createRoom = async (req, res) => {
   if (!participants || !participantsArray) {
     throw new customError.BadRequestError('Please provide all values');
   }
+
+  const existingRoom = await Room.findOne({
+    participantsArray: { $all: participantsArray },
+  });
+
+  if (existingRoom) {
+    return res.status(StatusCodes.CREATED).json({ room: existingRoom });
+  }
+
   const newRoom = new Room({
     userId: req.user.userId,
     participants,
@@ -20,7 +29,7 @@ const createRoom = async (req, res) => {
 
   res
     .status(StatusCodes.CREATED)
-    .json({ message: 'Room created successfully.', roomId: newRoom._id });
+    .json({ message: 'Room created successfully.', room: newRoom });
 };
 
 const retrieveSingleRoom = async (req, res) => {
@@ -31,18 +40,27 @@ const retrieveSingleRoom = async (req, res) => {
 };
 
 const retrieveAllUserRooms = async (req, res) => {
-  const rooms = await Room.find({ userId: req.user.userId });
+  const rooms = await Room.find({
+    participantsArray: { $in: [req.user.email] },
+  })
+    .sort({ 'lastMessage.createdAt': -1 })
+    .populate({
+      path: 'userId',
+      select: 'firstName lastName expoToken email avatar',
+    });
   res.status(StatusCodes.OK).json({ rooms });
 };
 
 const updateRoom = async (req, res) => {
   const { id } = req.params;
-  const updateData = req.body;
-
-  const rooms = await Room.findByIdAndUpdate(id, updateData, {
-    new: true,
-    runValidators: true,
-  });
+  const rooms = await Room.findByIdAndUpdate(
+    id,
+    { ...req.body, user: req.user.userId },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
   if (!rooms) throw new customError(`No room with id : ${req.params.id}`);
 
@@ -61,16 +79,20 @@ const deleteRoom = async (req, res) => {
 };
 
 const retrieveAllRoom = async (req, res) => {
-  const { sort, search } = req.query;
+  const { search } = req.query;
   const queryObject = {};
   if (search) {
     queryObject.participantsArray = { $regex: search, $options: 'i' };
   }
-  const { sortKey, skip, limit } = createQueryFilters(req, sort);
+  const { skip, limit } = createQueryFilters(req);
   const rooms = await Room.find(queryObject)
-    .sort(sortKey)
+    .sort('-createdAt')
     .skip(skip)
-    .limit(limit);
+    .limit(limit)
+    .populate({
+      path: 'userId',
+      select: 'firstName lastName expoToken email  avatar',
+    });
   const totalConversation = await Room.countDocuments(queryObject);
   const numbOfPages = Math.ceil(totalConversation / limit);
   res.status(StatusCodes.OK).json({ totalConversation, numbOfPages, rooms });

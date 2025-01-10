@@ -26,6 +26,7 @@ const loanRoute = require('./routes/loanRoute');
 const reportRoute = require('./routes/reportRoute');
 const notificationRoute = require('./routes/notificationRoute');
 const transactionRoute = require('./routes/transactionRoute');
+const statementRoute = require('./routes/statementRoute');
 const roomRoute = require('./routes/roomRoute');
 const messageRoute = require('./routes/messageRoute');
 
@@ -71,6 +72,7 @@ app.use('/api/v1/loan', authenticateUser, loanRoute);
 app.use('/api/v1/report', authenticateUser, reportRoute);
 app.use('/api/v1/notification', authenticateUser, notificationRoute);
 app.use('/api/v1/transaction', authenticateUser, transactionRoute);
+app.use('/api/v1/statement', authenticateUser, statementRoute);
 app.use('/api/v1/room', authenticateUser, roomRoute);
 app.use('/api/v1/message', authenticateUser, messageRoute);
 // middleware

@@ -21,7 +21,11 @@ const errorHandleMiddleware = (err, req, res, next) => {
   }
 
   if (err.name === 'CastError') {
-    customError.msg = `No user found with id : ${err.value}`;
+    const operation = 'fetching';
+    const expectedType = 'ObjectId';
+    const timestamp = new Date().toISOString();
+
+    customError.msg = `Error during ${operation}: Invalid ID format '${err.value}' provided at ${timestamp}. Expected type: ${expectedType}.`;
     customError.statusCode = 404;
   }
 

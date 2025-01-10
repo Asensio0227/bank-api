@@ -4,7 +4,6 @@ const transactionModel = new mongoose.Schema(
   {
     bank: {
       type: String,
-      required: [true, 'Please provide bank name'],
     },
     amount: {
       type: Number,
@@ -53,16 +52,21 @@ const transactionModel = new mongoose.Schema(
     receiverAccId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
     },
     location: {
       type: String,
       required: true,
     },
+    isReversed: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ['completed', 'pending', 'failed', 'canceled'],
+      enum: ['completed', 'pending', 'failed', 'canceled', 'defaulted'],
       default: 'pending',
+    },
+    reversalStatus: {
+      type: String,
+      enum: ['completed', 'declined', 'ready'],
+      default: 'ready',
     },
     transactionCharges: {
       type: Number,
@@ -70,7 +74,14 @@ const transactionModel = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ['deposit', 'withdrawal', 'transfer', 'loan', 'payment'],
+      enum: [
+        'deposit',
+        'withdrawal',
+        'transfer',
+        'loan',
+        'payment',
+        'reversal',
+      ],
       required: true,
     },
   },

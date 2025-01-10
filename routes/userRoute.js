@@ -13,6 +13,7 @@ const {
   updateUserPassword,
   updateUserStatus,
   deleteUser,
+  getAllAssistant,
 } = require('../controllers/userController');
 const { upload } = require('../middleware/multerMiddleware');
 const { createPushToken } = require('../controllers/expoController');
@@ -21,6 +22,7 @@ router
   .route('/')
   .get(authorizedPermissions('admin', 'member', 'assistant'), getAllUsers);
 router.route('/showMe').get(showCurrentUser);
+router.route('/assistant').get(getAllAssistant);
 router
   .route('/updateUser')
   .patch(checkForTestUser, upload.single('avatar'), updateUser);

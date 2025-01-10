@@ -32,7 +32,7 @@ const accountModel = new mongoose.Schema(
     overdraftLimit: {
       type: Number,
       default: 100000,
-      min: 100000,
+      min: 100,
       max: 10000000000,
     },
     userId: {

@@ -16,9 +16,7 @@ router.route('/').post(createRoom);
 router.route('/admin').get(retrieveAllRoom);
 router.route('/').get(retrieveAllUserRooms);
 router.route('/:id').delete(authorizedPermissions('admin'), deleteRoom);
-router
-  .route('/:id')
-  .patch(authorizedPermissions('admin', 'member', 'assistant'), updateRoom);
+router.route('/:id').put(updateRoom);
 router.route('/:id').get(retrieveSingleRoom);
 
 module.exports = router;
