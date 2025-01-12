@@ -7,8 +7,9 @@ const { incrementTransaction } = require('../utils/audit');
 const createQueryFilters = require('../utils/queryFilters');
 
 const retrieveBankStatement = async (req, res) => {
-  const { startDate, endDate, sort, accountNumber } = req.query;
-  if (!startDate || !endDate || !accountNumber) {
+  const { startDate, endDate, location } = req.body;
+  const accountNumber = req.params.accountNumber;
+  if (!startDate || !endDate || !location) {
     throw new CustomError.BadRequestError('Please provide all values');
   }
   const queryObject = {
@@ -26,7 +27,6 @@ const retrieveBankStatement = async (req, res) => {
     createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
   };
 
-  const { sortKey } = createQueryFilters(req, sort);
   const transactions = await Transaction.find(queryObject)
     .populate([
       {
@@ -39,19 +39,32 @@ const retrieveBankStatement = async (req, res) => {
           'firstName lastName ideaNumber email phoneNumber avatar physicalAddress',
       },
     ])
-    .sort(sortKey);
+    .sort('-createdAt');
 
   if (!transactions) {
     throw new CustomError.NotFoundError(
       'No transactions found for this period.'
     );
   }
+  const date1 = new Date(startDate);
+  const date2 = new Date(endDate);
+  console.log(startDate, endDate);
+  console.log(date1, date2);
+  const timeDifference = date2 - date1;
+  const dayDifference = timeDifference / (1000 * 3600 * 24);
+
+  if (dayDifference > 90) {
+    throw new CustomError.BadRequestError(
+      'The date range cannot exceed 90 days.'
+    );
+  }
+
   const acc = await Account.find({ accountNumber });
   const totalTransactions = transactions.length;
   const netBalance = acc.length > 0 && incrementTransaction(transactions, acc);
   const state = await Statement.create({
     userId: req.user.userId,
-    location: '5 commission street johannesburg, south africa',
+    location,
     accountNumber,
     startDate,
     endDate,

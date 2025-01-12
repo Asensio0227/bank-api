@@ -193,7 +193,7 @@ const retrieveTransactions = async (req, res) => {
         select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
       {
-        path: 'toUserAccountNumber',
+        path: 'receiverAccId',
         select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
     ])
@@ -243,7 +243,7 @@ const retrieveSingleTransactions = async (req, res) => {
       select: 'firstName lastName ideaNumber email phoneNumber avatar',
     },
     {
-      path: 'toUserAccountNumber',
+      path: 'receiverAccId',
       select: 'firstName lastName ideaNumber email phoneNumber avatar',
     },
   ]);
@@ -328,7 +328,7 @@ const getAllTransactions = async (req, res) => {
         select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
       {
-        path: 'toUserAccountNumber',
+        path: 'receiverAccId',
         select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
     ])
@@ -472,38 +472,13 @@ const reversalTransaction = async (req, res) => {
 };
 
 const retrieveReversalTransaction = async (req, res) => {
-  req.body.userId = req.user.userId;
   const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
   const transactions = await Transaction.find({
     createdAt: { $gte: thirtyMinutesAgo },
     status: 'completed',
     isReversed: false,
-  }).sort('-createdAt');
-  res.status(StatusCodes.OK).json({ transactions });
-};
-
-const retrieveBankStatement = async (req, res) => {
-  const { startDate, endDate, sort, accountNumber } = req.query;
-  if (!startDate || !endDate || !accountNumber) {
-    throw new CustomError.BadRequestError('Please provide all values');
-  }
-  const queryObject = {
-    $and: [
-      {
-        $or: [{ userId: req.user.userId }, { receiverAccId: req.user.userId }],
-      },
-      {
-        $or: [
-          { accountNumber: accountNumber },
-          { toAccountNumber: accountNumber },
-        ],
-      },
-    ],
-    createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
-  };
-
-  const { sortKey } = createQueryFilters(req, sort);
-  const transactions = await Transaction.find(queryObject)
+    userId: req.user.userId,
+  })
     .populate([
       {
         path: 'accountId',
@@ -511,31 +486,68 @@ const retrieveBankStatement = async (req, res) => {
       },
       {
         path: 'userId',
-        select:
-          'firstName lastName ideaNumber email phoneNumber avatar physicalAddress',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
+      },
+      {
+        path: 'receiverAccId',
+        select: 'firstName lastName ideaNumber email phoneNumber avatar',
       },
     ])
-    .sort(sortKey);
+    .sort('-createdAt');
+  res.status(StatusCodes.OK).json({ transactions });
+};
 
-  if (!transactions) {
-    throw new CustomError.NotFoundError(
-      'No transactions found for this period.'
-    );
-  }
-  const acc = await Account.find({ accountNumber });
-  const totalTransactions = transactions.length;
-  const netBalance = acc.length > 0 && incrementTransaction(transactions, acc);
-  const state = await StatementModel.create({
-    userId: req.user.userId,
-    location: '5 commission street johannesburg, south africa',
-    accountNumber,
-    startDate,
-    endDate,
-    balance: netBalance,
-    transaction: transactions,
-  });
-
-  res.status(StatusCodes.CREATED).json({ state });
+const retrieveBankStatement = async (req, res) => {
+  // const { startDate, endDate, sort, accountNumber } = req.query;
+  // if (!startDate || !endDate || !accountNumber) {
+  //   throw new CustomError.BadRequestError('Please provide all values');
+  // }
+  // const queryObject = {
+  //   $and: [
+  //     {
+  //       $or: [{ userId: req.user.userId }, { receiverAccId: req.user.userId }],
+  //     },
+  //     {
+  //       $or: [
+  //         { accountNumber: accountNumber },
+  //         { toAccountNumber: accountNumber },
+  //       ],
+  //     },
+  //   ],
+  //   createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+  // };
+  // const { sortKey } = createQueryFilters(req, sort);
+  // const transactions = await Transaction.find(queryObject)
+  //   .populate([
+  //     {
+  //       path: 'accountId',
+  //       select: 'accountNumber branchCode accountHolderName',
+  //     },
+  //     {
+  //       path: 'userId',
+  //       select:
+  //         'firstName lastName ideaNumber email phoneNumber avatar physicalAddress',
+  //     },
+  //   ])
+  //   .sort(sortKey);
+  // if (!transactions) {
+  //   throw new CustomError.NotFoundError(
+  //     'No transactions found for this period.'
+  //   );
+  // }
+  // const acc = await Account.find({ accountNumber });
+  // const totalTransactions = transactions.length;
+  // const netBalance = acc.length > 0 && incrementTransaction(transactions, acc);
+  // const state = await StatementModel.create({
+  //   userId: req.user.userId,
+  //   location,
+  //   accountNumber,
+  //   startDate,
+  //   endDate,
+  //   balance: netBalance,
+  //   transaction: transactions,
+  // });
+  // res.status(StatusCodes.CREATED).json({ state });
 };
 
 module.exports = {

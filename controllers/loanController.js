@@ -65,8 +65,6 @@ const getLoanApplications = async (req, res) => {
   if (employmentStatus && employmentStatus.trim() !== 'all')
     queryObject.employmentStatus = employmentStatus;
   if (search) {
-    queryObject.name = { $regex: search, $options: 'i' };
-    queryObject.phoneNumber = { $regex: search, $options: 'i' };
     queryObject.email = { $regex: search, $options: 'i' };
   }
 
@@ -325,8 +323,6 @@ const getAllLoan = async (req, res) => {
     queryObJect.employmentStatus = employmentStatus;
 
   if (search) {
-    queryObJect.name = { $regex: search, $options: 'i' };
-    queryObJect.phoneNumber = { $regex: search, $options: 'i' };
     queryObJect.email = { $regex: search, $options: 'i' };
   }
   let result = Loan.find(queryObJect).populate([
